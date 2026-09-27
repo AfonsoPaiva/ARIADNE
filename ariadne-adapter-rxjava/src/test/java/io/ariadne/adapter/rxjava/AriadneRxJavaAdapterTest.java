@@ -59,6 +59,20 @@ class AriadneRxJavaAdapterTest {
     }
 
     @Test
+    void shouldPassCanaryProbeOnInstallation() {
+        assertThat(AriadneRxJavaAdapter.isHealthy()).isFalse();
+
+        AriadneRxJavaAdapter.install();
+
+        assertThat(AriadneRxJavaAdapter.isHealthy()).isTrue();
+        assertThat(AriadneRxJavaAdapter.healthStatus().isHealthy()).isTrue();
+        assertThat(AriadneRxJavaAdapter.healthStatus().message()).contains("successfully verified");
+
+        AriadneRxJavaAdapter.uninstall();
+        assertThat(AriadneRxJavaAdapter.isHealthy()).isFalse();
+    }
+
+    @Test
     void shouldReconstructCausalPathWhenRxJavaStreamFailsAsync() {
         AriadneRxJavaAdapter.install();
 

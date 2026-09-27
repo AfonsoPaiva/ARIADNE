@@ -65,6 +65,20 @@ class AriadneReactorAdapterTest {
     }
 
     @Test
+    void shouldPassCanaryProbeOnInstallation() {
+        assertThat(AriadneReactorAdapter.isHealthy()).isFalse();
+
+        AriadneReactorAdapter.install();
+
+        assertThat(AriadneReactorAdapter.isHealthy()).isTrue();
+        assertThat(AriadneReactorAdapter.healthStatus().isHealthy()).isTrue();
+        assertThat(AriadneReactorAdapter.healthStatus().message()).contains("successfully verified");
+
+        AriadneReactorAdapter.uninstall();
+        assertThat(AriadneReactorAdapter.isHealthy()).isFalse();
+    }
+
+    @Test
     void shouldReconstructCausalPathWhenReactorOperatorFailsAsync() {
         AriadneReactorAdapter.install();
 
