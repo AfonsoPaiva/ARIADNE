@@ -1,42 +1,52 @@
 package io.ariadne.core;
 
+import java.util.Objects;
 import java.util.concurrent.Callable;
 
 /**
- * Context carrier managing the propagation of {@link Link} instances along thread boundaries.
- * <p>
- * Ensures zero-leak thread local management with explicit restore and scoped cleanup semantics.
+ * Context facade managing the propagation of {@link Link} instances along execution boundaries.
+ * Delegates to a pluggable {@link ContextCarrier} (defaulting to {@link ThreadLocalContextCarrier}).
  */
 public final class AriadneContext {
 
-    private static final ThreadLocal<Link> CURRENT_LINK = new ThreadLocal<>();
+    private static volatile ContextCarrier CARRIER = new ThreadLocalContextCarrier();
 
     private AriadneContext() {}
 
     /**
-     * Retrieves the active {@link Link} on the current thread, or {@code null} if none is active.
+     * Gets the active {@link ContextCarrier} implementation.
+     */
+    public static ContextCarrier carrier() {
+        return CARRIER;
+    }
+
+    /**
+     * Configures a custom {@link ContextCarrier} strategy.
+     */
+    public static void setCarrier(ContextCarrier carrier) {
+        CARRIER = Objects.requireNonNull(carrier, "Carrier must not be null");
+    }
+
+    /**
+     * Retrieves the active {@link Link} on the current context, or {@code null} if none is active.
      */
     public static Link current() {
-        return CURRENT_LINK.get();
+        return CARRIER.current();
     }
 
     /**
-     * Sets the active {@link Link} on the current thread.
-     * If {@code null}, removes the thread local entry to prevent memory leaks.
+     * Sets the active {@link Link} on the current context.
+     * If {@code null}, clears the context.
      */
     public static void set(Link link) {
-        if (link == null) {
-            CURRENT_LINK.remove();
-        } else {
-            CURRENT_LINK.set(link);
-        }
+        CARRIER.set(link);
     }
 
     /**
-     * Clears the active {@link Link} from the current thread.
+     * Clears the active {@link Link} from the current context.
      */
     public static void clear() {
-        CURRENT_LINK.remove();
+        CARRIER.clear();
     }
 
     /**
@@ -46,30 +56,24 @@ public final class AriadneContext {
      * @return New immutable {@link Link}
      */
     public static Link spawn(int siteId) {
-        Link parent = current();
-        return new Link(parent, siteId, Thread.currentThread().threadId());
+        return CARRIER.spawn(siteId);
     }
 
     /**
-     * Attaches a {@link Link} to the current thread for the duration of a scoped block,
+     * Attaches a {@link Link} to the current context for the duration of a scoped block,
      * restoring the previous link upon closure.
      */
     public static Scope attach(Link link) {
-        Link previous = current();
-        set(link);
-        return () -> set(previous);
+        ContextCarrier.Scope scope = CARRIER.attach(link);
+        return scope::close;
     }
 
     /**
      * Executes a runnable within the scope of the given {@link Link}, restoring previous state.
      */
     public static void runWith(Link link, Runnable action) {
-        Link previous = current();
-        set(link);
-        try {
+        try (Scope ignored = attach(link)) {
             action.run();
-        } finally {
-            set(previous);
         }
     }
 
@@ -77,12 +81,8 @@ public final class AriadneContext {
      * Executes a callable within the scope of the given {@link Link}, restoring previous state.
      */
     public static <V> V callWith(Link link, Callable<V> action) throws Exception {
-        Link previous = current();
-        set(link);
-        try {
+        try (Scope ignored = attach(link)) {
             return action.call();
-        } finally {
-            set(previous);
         }
     }
 
