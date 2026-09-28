@@ -24,7 +24,6 @@ public final class AriadneCallable<V> implements Callable<V> {
     /**
      * Factory method preventing redundant wrapping.
      */
-    @SuppressWarnings("unchecked")
     public static <T> Callable<T> wrap(Callable<T> callable) {
         if (callable == null || callable instanceof AriadneCallable) {
             return callable;
@@ -35,7 +34,6 @@ public final class AriadneCallable<V> implements Callable<V> {
     /**
      * Factory method wrapping with an explicit link.
      */
-    @SuppressWarnings("unchecked")
     public static <T> Callable<T> wrap(Callable<T> callable, Link link) {
         if (callable == null) {
             return null;
@@ -52,7 +50,7 @@ public final class AriadneCallable<V> implements Callable<V> {
         AriadneContext.set(capturedLink);
         try {
             return target.call();
-        } catch (Throwable t) {
+        } catch (Exception | Error t) {
             AriadneReconstructor.enrich(t, capturedLink);
             throw t;
         } finally {

@@ -21,7 +21,6 @@ public final class AriadneConsumer<T> implements Consumer<T> {
         this.capturedLink = capturedLink;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> Consumer<T> wrap(Consumer<T> consumer) {
         if (consumer == null || consumer instanceof AriadneConsumer) {
             return consumer;
@@ -29,7 +28,6 @@ public final class AriadneConsumer<T> implements Consumer<T> {
         return new AriadneConsumer<>(consumer);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T> Consumer<T> wrap(Consumer<T> consumer, Link link) {
         if (consumer == null) {
             return null;

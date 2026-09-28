@@ -21,7 +21,6 @@ public final class AriadneBiConsumer<T, U> implements BiConsumer<T, U> {
         this.capturedLink = capturedLink;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, U> BiConsumer<T, U> wrap(BiConsumer<T, U> consumer) {
         if (consumer == null || consumer instanceof AriadneBiConsumer) {
             return consumer;
@@ -29,7 +28,6 @@ public final class AriadneBiConsumer<T, U> implements BiConsumer<T, U> {
         return new AriadneBiConsumer<>(consumer);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, U> BiConsumer<T, U> wrap(BiConsumer<T, U> consumer, Link link) {
         if (consumer == null) {
             return null;

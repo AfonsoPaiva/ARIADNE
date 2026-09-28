@@ -5,7 +5,6 @@ import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.agent.builder.ResettableClassFileTransformer;
 import net.bytebuddy.asm.Advice;
 
-import java.io.File;
 import java.lang.instrument.Instrumentation;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
@@ -15,7 +14,6 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.jar.JarFile;
 
 import static net.bytebuddy.matcher.ElementMatchers.*;
 
@@ -28,6 +26,7 @@ import static net.bytebuddy.matcher.ElementMatchers.*;
 public final class AriadneAgent {
 
     private static final AtomicBoolean INSTALLED = new AtomicBoolean(false);
+    @SuppressWarnings("unused")
     private static volatile ResettableClassFileTransformer TRANSFORMER;
 
     static {
@@ -44,9 +43,9 @@ public final class AriadneAgent {
         install(inst);
     }
 
-    public static synchronized ResettableClassFileTransformer install(Instrumentation inst) {
+    public static synchronized void install(Instrumentation inst) {
         if (INSTALLED.get()) {
-            return TRANSFORMER;
+            return;
         }
 
         // 1. Ensure core classes are visible on bootstrap search path
@@ -106,7 +105,6 @@ public final class AriadneAgent {
 
         TRANSFORMER = agentBuilder.installOn(inst);
         INSTALLED.set(true);
-        return TRANSFORMER;
     }
 
     private static void tryInjectBootstrapPath(Instrumentation inst) {

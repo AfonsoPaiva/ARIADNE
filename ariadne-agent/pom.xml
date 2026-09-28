@@ -81,6 +81,17 @@
                         </goals>
                         <configuration>
                             <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <artifactSet>
+                                <includes>
+                                    <include>io.ariadne:*</include>
+                                    <include>net.bytebuddy:byte-buddy</include>
+                                </includes>
+                                <excludes>
+                                    <exclude>io.projectreactor:*</exclude>
+                                    <exclude>io.reactivex.rxjava3:*</exclude>
+                                    <exclude>org.reactivestreams:*</exclude>
+                                </excludes>
+                            </artifactSet>
                             <relocations>
                                 <relocation>
                                     <pattern>net.bytebuddy</pattern>

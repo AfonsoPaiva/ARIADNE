@@ -1,17 +1,21 @@
 package io.ariadne.agent;
 
-import io.ariadne.core.AriadneContext;
-import net.bytebuddy.agent.ByteBuddyAgent;
+import java.lang.instrument.Instrumentation;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.lang.instrument.Instrumentation;
-import java.util.concurrent.*;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import net.bytebuddy.agent.ByteBuddyAgent;
 
 class AriadneAgentTest {
 

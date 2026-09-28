@@ -21,7 +21,6 @@ public final class AriadneFunction<T, R> implements Function<T, R> {
         this.capturedLink = capturedLink;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, R> Function<T, R> wrap(Function<T, R> function) {
         if (function == null || function instanceof AriadneFunction) {
             return function;
@@ -29,7 +28,6 @@ public final class AriadneFunction<T, R> implements Function<T, R> {
         return new AriadneFunction<>(function);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, R> Function<T, R> wrap(Function<T, R> function, Link link) {
         if (function == null) {
             return null;

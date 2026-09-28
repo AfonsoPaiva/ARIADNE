@@ -21,7 +21,6 @@ public final class AriadneBiFunction<T, U, R> implements BiFunction<T, U, R> {
         this.capturedLink = capturedLink;
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, U, R> BiFunction<T, U, R> wrap(BiFunction<T, U, R> function) {
         if (function == null || function instanceof AriadneBiFunction) {
             return function;
@@ -29,7 +28,6 @@ public final class AriadneBiFunction<T, U, R> implements BiFunction<T, U, R> {
         return new AriadneBiFunction<>(function);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T, U, R> BiFunction<T, U, R> wrap(BiFunction<T, U, R> function, Link link) {
         if (function == null) {
             return null;

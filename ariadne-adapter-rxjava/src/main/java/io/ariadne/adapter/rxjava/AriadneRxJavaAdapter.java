@@ -7,14 +7,9 @@ import io.ariadne.core.CanaryProbeResult;
 import io.ariadne.core.Link;
 import io.ariadne.core.SiteRegistry;
 import io.ariadne.core.UnsupportedFrameworkVersionException;
-import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.CompletableObserver;
-import io.reactivex.rxjava3.core.Flowable;
-import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.core.MaybeObserver;
-import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.Observer;
-import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleObserver;
 import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Function;
@@ -196,7 +191,8 @@ public final class AriadneRxJavaAdapter {
         AtomicBoolean intercepted = new AtomicBoolean(false);
         CountDownLatch latch = new CountDownLatch(1);
 
-        try (AriadneContext.Scope ignored = AriadneContext.attach(probeOrigin)) {
+        try (AriadneContext.Scope scope = AriadneContext.attach(probeOrigin)) {
+            assert scope != null;
             Schedulers.single().scheduleDirect(() -> {
                 try {
                     Link current = AriadneContext.current();

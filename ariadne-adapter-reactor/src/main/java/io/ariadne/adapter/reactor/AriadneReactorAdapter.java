@@ -1,5 +1,12 @@
 package io.ariadne.adapter.reactor;
 
+import java.lang.reflect.Method;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 import io.ariadne.core.AriadneContext;
 import io.ariadne.core.AriadneReconstructor;
 import io.ariadne.core.AriadneRunnable;
@@ -10,13 +17,6 @@ import io.ariadne.core.SiteRegistry;
 import io.ariadne.core.UnsupportedFrameworkVersionException;
 import reactor.core.publisher.Hooks;
 import reactor.core.scheduler.Schedulers;
-
-import java.lang.reflect.Method;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 /**
  * Project Reactor adapter providing zero-overhead causal propagation and lazy error reconstruction.
@@ -130,7 +130,8 @@ public final class AriadneReactorAdapter {
         AtomicBoolean intercepted = new AtomicBoolean(false);
         CountDownLatch latch = new CountDownLatch(1);
 
-        try (AriadneContext.Scope ignored = AriadneContext.attach(probeOrigin)) {
+        try (AriadneContext.Scope scope = AriadneContext.attach(probeOrigin)) {
+            assert scope != null;
             Schedulers.single().schedule(() -> {
                 try {
                     Link current = AriadneContext.current();
