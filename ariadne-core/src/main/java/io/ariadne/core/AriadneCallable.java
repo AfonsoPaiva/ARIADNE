@@ -46,15 +46,11 @@ public final class AriadneCallable<V> implements Callable<V> {
 
     @Override
     public V call() throws Exception {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             return target.call();
         } catch (Exception | Error t) {
             AriadneReconstructor.enrich(t, capturedLink);
             throw t;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

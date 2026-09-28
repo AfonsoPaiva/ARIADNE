@@ -31,6 +31,17 @@ public interface ContextCarrier {
      * @return New immutable child {@link Link}
      */
     Link spawn(int siteId);
+ 
+    /**
+     * Spawns a new child {@link Link} rooted at the current active link with an optional attachment.
+     *
+     * @param siteId     Call site identifier
+     * @param attachment Optional contextual payload (e.g. MDC snapshot, trace correlation)
+     * @return New immutable child {@link Link}
+     */
+    default Link spawn(int siteId, Object attachment) {
+        return spawn(siteId);
+    }
 
     /**
      * Attaches a {@link Link} to the current context for a scoped duration,

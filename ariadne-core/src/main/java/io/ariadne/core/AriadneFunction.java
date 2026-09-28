@@ -40,15 +40,11 @@ public final class AriadneFunction<T, R> implements Function<T, R> {
 
     @Override
     public R apply(T t) {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             return target.apply(t);
         } catch (Throwable ex) {
             AriadneReconstructor.enrich(ex, capturedLink);
             throw ex;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

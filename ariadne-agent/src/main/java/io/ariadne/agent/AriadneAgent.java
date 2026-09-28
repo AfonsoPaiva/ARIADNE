@@ -131,5 +131,13 @@ public final class AriadneAgent {
         } catch (Throwable ignored) {
             // RxJava not on classpath
         }
+
+        try {
+            Class.forName("org.slf4j.MDC");
+            Class<?> mdcAdapter = Class.forName("io.ariadne.adapter.mdc.AriadneMdcAdapter");
+            mdcAdapter.getMethod("install").invoke(null);
+        } catch (Throwable ignored) {
+            // SLF4J MDC not on classpath
+        }
     }
 }

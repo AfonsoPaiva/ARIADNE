@@ -12,11 +12,17 @@ public final class Link {
     public final Link parent;
     public final int siteId;
     public final long threadId;
+    public final Object attachment;
 
     public Link(Link parent, int siteId, long threadId) {
+        this(parent, siteId, threadId, null);
+    }
+
+    public Link(Link parent, int siteId, long threadId, Object attachment) {
         this.parent = parent;
         this.siteId = siteId;
         this.threadId = threadId;
+        this.attachment = attachment;
     }
 
     /**

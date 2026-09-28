@@ -31,6 +31,10 @@
         </dependency>
         <dependency>
             <groupId>io.ariadne</groupId>
+            <artifactId>ariadne-adapter-mdc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.ariadne</groupId>
             <artifactId>ariadne-agent</artifactId>
         </dependency>
 
@@ -47,6 +51,11 @@
         <dependency>
             <groupId>net.bytebuddy</groupId>
             <artifactId>byte-buddy-agent</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
             <scope>test</scope>
         </dependency>
 

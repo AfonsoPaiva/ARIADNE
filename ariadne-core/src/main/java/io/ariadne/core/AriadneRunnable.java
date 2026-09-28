@@ -45,15 +45,11 @@ public final class AriadneRunnable implements Runnable {
 
     @Override
     public void run() {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             target.run();
         } catch (Throwable t) {
             AriadneReconstructor.enrich(t, capturedLink);
             throw t;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

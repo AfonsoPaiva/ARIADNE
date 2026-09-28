@@ -17,10 +17,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.ariadne.adapter.mdc.AriadneMdcAdapter;
 import io.ariadne.adapter.reactor.AriadneReactorAdapter;
 import io.ariadne.adapter.rxjava.AriadneRxJavaAdapter;
 import io.ariadne.agent.AriadneAgent;
 import net.bytebuddy.agent.ByteBuddyAgent;
+import org.slf4j.MDC;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -40,6 +42,7 @@ class CrossFrameworkIntegrationTest {
         AriadneAgent.install(inst);
         AriadneReactorAdapter.install();
         AriadneRxJavaAdapter.install();
+        AriadneMdcAdapter.install();
 
         BOOTSTRAP_CONTEXT = Class.forName("io.ariadne.core.AriadneContext", true, null);
         BOOTSTRAP_LINK = Class.forName("io.ariadne.core.Link", true, null);
@@ -47,12 +50,14 @@ class CrossFrameworkIntegrationTest {
 
     @BeforeEach
     void setUp() throws Exception {
+        MDC.clear();
         clearContext();
     }
 
     @AfterEach
     void tearDown() throws Exception {
         clearContext();
+        MDC.clear();
     }
 
     private static void setContext(int siteId) throws Exception {
@@ -193,5 +198,21 @@ class CrossFrameworkIntegrationTest {
                                 return t.getStackTrace().length <= 32;
                             });
                 });
+    }
+
+    @Test
+    void shouldPropagateMdcAcrossReactorAndRxJavaPipelines() {
+        MDC.put("traceId", "flow-xyz");
+        MDC.put("userId", "paiva");
+
+        String result = Mono.fromCallable(() -> MDC.get("traceId") + "@" + MDC.get("userId"))
+                .subscribeOn(Schedulers.boundedElastic())
+                .publishOn(Schedulers.parallel())
+                .map(val -> val + " -> rx:" + io.reactivex.rxjava3.core.Single.fromCallable(() -> MDC.get("traceId"))
+                        .subscribeOn(io.reactivex.rxjava3.schedulers.Schedulers.io())
+                        .blockingGet())
+                .block(Duration.ofSeconds(5));
+
+        assertThat(result).isEqualTo("flow-xyz@paiva -> rx:flow-xyz");
     }
 }

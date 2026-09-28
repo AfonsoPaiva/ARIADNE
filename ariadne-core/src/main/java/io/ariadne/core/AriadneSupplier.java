@@ -40,15 +40,11 @@ public final class AriadneSupplier<T> implements Supplier<T> {
 
     @Override
     public T get() {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             return target.get();
         } catch (Throwable t) {
             AriadneReconstructor.enrich(t, capturedLink);
             throw t;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

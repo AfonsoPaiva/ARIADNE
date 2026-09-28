@@ -20,6 +20,7 @@ class AriadneConfigTest {
         assertThat(AriadneConfig.isCanaryProbesEnabled()).isTrue();
         assertThat(AriadneConfig.isFailFast()).isFalse();
         assertThat(AriadneConfig.isJmxEnabled()).isTrue();
+        assertThat(AriadneConfig.isMdcPropagationEnabled()).isTrue();
     }
 
     @Test
@@ -57,6 +58,9 @@ class AriadneConfigTest {
 
         AriadneConfig.setJmxEnabled(false);
         assertThat(AriadneConfig.isJmxEnabled()).isFalse();
+
+        AriadneConfig.setMdcPropagationEnabled(false);
+        assertThat(AriadneConfig.isMdcPropagationEnabled()).isFalse();
     }
 
     @Test

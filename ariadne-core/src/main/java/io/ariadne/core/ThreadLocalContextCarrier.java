@@ -28,8 +28,13 @@ public final class ThreadLocalContextCarrier implements ContextCarrier {
 
     @Override
     public Link spawn(int siteId) {
+        return spawn(siteId, null);
+    }
+
+    @Override
+    public Link spawn(int siteId, Object attachment) {
         Link parent = current();
-        return new Link(parent, siteId, Thread.currentThread().threadId());
+        return new Link(parent, siteId, Thread.currentThread().threadId(), attachment);
     }
 
     @Override

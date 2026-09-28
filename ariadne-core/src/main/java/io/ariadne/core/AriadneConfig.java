@@ -23,6 +23,7 @@ public final class AriadneConfig {
     public static final boolean DEFAULT_CANARY_PROBES_ENABLED = true;
     public static final boolean DEFAULT_FAIL_FAST = false;
     public static final boolean DEFAULT_JMX_ENABLED = true;
+    public static final boolean DEFAULT_MDC_PROPAGATION_ENABLED = true;
 
     private static final AtomicInteger MAX_DEPTH = new AtomicInteger(
             getIntProperty("ariadne.max.depth", "ARIADNE_MAX_DEPTH", DEFAULT_MAX_DEPTH, MIN_MAX_DEPTH, MAX_MAX_DEPTH)
@@ -38,6 +39,10 @@ public final class AriadneConfig {
 
     private static final AtomicBoolean JMX_ENABLED = new AtomicBoolean(
             getBooleanProperty("ariadne.jmx.enabled", "ARIADNE_JMX_ENABLED", DEFAULT_JMX_ENABLED)
+    );
+
+    private static final AtomicBoolean MDC_PROPAGATION_ENABLED = new AtomicBoolean(
+            getBooleanProperty("ariadne.mdc.enabled", "ARIADNE_MDC_ENABLED", DEFAULT_MDC_PROPAGATION_ENABLED)
     );
 
     private AriadneConfig() {}
@@ -104,6 +109,19 @@ public final class AriadneConfig {
     public static void setJmxEnabled(boolean jmxEnabled) {
         JMX_ENABLED.set(jmxEnabled);
     }
+    /**
+     * Checks if automatic MDC (Mapped Diagnostic Context) propagation is enabled.
+     */
+    public static boolean isMdcPropagationEnabled() {
+        return MDC_PROPAGATION_ENABLED.get();
+    }
+
+    /**
+     * Enables or disables automatic MDC propagation across async boundaries.
+     */
+    public static void setMdcPropagationEnabled(boolean enabled) {
+        MDC_PROPAGATION_ENABLED.set(enabled);
+    }
 
     /**
      * Resets all configurations to their default values.
@@ -113,6 +131,7 @@ public final class AriadneConfig {
         CANARY_PROBES_ENABLED.set(DEFAULT_CANARY_PROBES_ENABLED);
         FAIL_FAST.set(DEFAULT_FAIL_FAST);
         JMX_ENABLED.set(DEFAULT_JMX_ENABLED);
+        MDC_PROPAGATION_ENABLED.set(DEFAULT_MDC_PROPAGATION_ENABLED);
     }
 
     private static int getIntProperty(String sysProp, String envVar, int defaultValue, int min, int max) {

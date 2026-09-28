@@ -112,6 +112,16 @@ public final class AriadneManagement implements AriadneMXBean {
     }
 
     @Override
+    public boolean isMdcPropagationEnabled() {
+        return AriadneConfig.isMdcPropagationEnabled();
+    }
+
+    @Override
+    public void setMdcPropagationEnabled(boolean enabled) {
+        AriadneConfig.setMdcPropagationEnabled(enabled);
+    }
+
+    @Override
     public long getHopsSpawned() {
         return AriadneMetrics.getHopsSpawned();
     }
@@ -164,6 +174,7 @@ public final class AriadneManagement implements AriadneMXBean {
         sb.append("Max Depth: ").append(getMaxDepth()).append("\n");
         sb.append("Canary Probes Enabled: ").append(isCanaryProbesEnabled()).append("\n");
         sb.append("Fail Fast: ").append(isFailFast()).append("\n");
+        sb.append("MDC Propagation Enabled: ").append(isMdcPropagationEnabled()).append("\n");
         sb.append("Hops Spawned: ").append(getHopsSpawned()).append("\n");
         sb.append("Reconstructions Total: ").append(getReconstructionsTotal()).append("\n");
         sb.append("Reconstructions Capped: ").append(getReconstructionsCapped()).append("\n");

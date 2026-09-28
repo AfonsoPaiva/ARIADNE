@@ -40,15 +40,11 @@ public final class AriadneBiFunction<T, U, R> implements BiFunction<T, U, R> {
 
     @Override
     public R apply(T t, U u) {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             return target.apply(t, u);
         } catch (Throwable ex) {
             AriadneReconstructor.enrich(ex, capturedLink);
             throw ex;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

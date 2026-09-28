@@ -39,6 +39,16 @@ public interface AriadneMXBean {
      */
     void setFailFast(boolean failFast);
 
+    /**
+     * Returns true if automatic MDC (Mapped Diagnostic Context) propagation is enabled.
+     */
+    boolean isMdcPropagationEnabled();
+
+    /**
+     * Dynamically enables or disables automatic MDC propagation across async boundaries.
+     */
+    void setMdcPropagationEnabled(boolean enabled);
+
     // Observability & Metrics Attributes (Read-only)
 
     /**

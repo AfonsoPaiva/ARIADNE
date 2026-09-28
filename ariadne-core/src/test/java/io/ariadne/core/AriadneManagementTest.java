@@ -56,6 +56,11 @@ class AriadneManagementTest {
         // Toggle canaryProbesEnabled via JMX
         mBeanServer.setAttribute(objectName, new Attribute("CanaryProbesEnabled", false));
         assertThat(AriadneConfig.isCanaryProbesEnabled()).isFalse();
+
+        // Toggle mdcPropagationEnabled via JMX
+        mBeanServer.setAttribute(objectName, new Attribute("MdcPropagationEnabled", false));
+        assertThat(AriadneConfig.isMdcPropagationEnabled()).isFalse();
+        assertThat(mBeanServer.getAttribute(objectName, "MdcPropagationEnabled")).isEqualTo(false);
     }
 
     @Test

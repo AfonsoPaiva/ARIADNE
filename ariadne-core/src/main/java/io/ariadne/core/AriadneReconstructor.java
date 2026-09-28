@@ -87,9 +87,12 @@ public final class AriadneReconstructor {
             return null;
         }
 
-        AsyncCausalityException exception = new AsyncCausalityException(
-                "Asynchronous execution path (" + hops + " hop" + (hops > 1 ? "s" : "") + ")"
-        );
+        StringBuilder msg = new StringBuilder("Asynchronous execution path (")
+                .append(hops).append(" hop").append(hops > 1 ? "s" : "").append(")");
+        if (rootLink != null && rootLink.attachment != null) {
+            msg.append(" [Context: ").append(rootLink.attachment).append("]");
+        }
+        AsyncCausalityException exception = new AsyncCausalityException(msg.toString());
         exception.setStackTrace(elements.toArray(new StackTraceElement[0]));
         return exception;
     }

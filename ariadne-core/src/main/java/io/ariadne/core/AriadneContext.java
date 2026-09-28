@@ -56,8 +56,19 @@ public final class AriadneContext {
      * @return New immutable {@link Link}
      */
     public static Link spawn(int siteId) {
+        return spawn(siteId, null);
+    }
+
+    /**
+     * Spawns a new child {@link Link} rooted at the current active link with an optional attachment.
+     *
+     * @param siteId     Call site identifier
+     * @param attachment Optional contextual payload (e.g. MDC snapshot, trace correlation)
+     * @return New immutable {@link Link}
+     */
+    public static Link spawn(int siteId, Object attachment) {
         AriadneMetrics.recordHop();
-        return CARRIER.spawn(siteId);
+        return CARRIER.spawn(siteId, attachment);
     }
 
     /**

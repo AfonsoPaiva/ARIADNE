@@ -16,6 +16,7 @@
         <module>ariadne-core</module>
         <module>ariadne-adapter-reactor</module>
         <module>ariadne-adapter-rxjava</module>
+        <module>ariadne-adapter-mdc</module>
         <module>ariadne-agent</module>
         <module>ariadne-benchmarks</module>
         <module>ariadne-integration-tests</module>
@@ -30,6 +31,8 @@
         <bytebuddy.version>1.14.12</bytebuddy.version>
         <reactor.version>3.6.4</reactor.version>
         <rxjava.version>3.1.8</rxjava.version>
+        <slf4j.version>2.0.18</slf4j.version>
+        <logback.version>1.5.38</logback.version>
         <junit.version>5.10.2</junit.version>
         <assertj.version>3.27.7</assertj.version>
         <jmh.version>1.37</jmh.version>
@@ -57,6 +60,11 @@
             <dependency>
                 <groupId>io.ariadne</groupId>
                 <artifactId>ariadne-adapter-rxjava</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.ariadne</groupId>
+                <artifactId>ariadne-adapter-mdc</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -100,6 +108,19 @@
                 <artifactId>jmh-generator-annprocess</artifactId>
                 <version>${jmh.version}</version>
                 <scope>provided</scope>
+            </dependency>
+
+            <!-- Logging & MDC -->
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ch.qos.logback</groupId>
+                <artifactId>logback-classic</artifactId>
+                <version>${logback.version}</version>
+                <scope>test</scope>
             </dependency>
 
             <!-- Test Dependencies -->

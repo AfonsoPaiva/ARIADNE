@@ -40,15 +40,11 @@ public final class AriadneBiConsumer<T, U> implements BiConsumer<T, U> {
 
     @Override
     public void accept(T t, U u) {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             target.accept(t, u);
         } catch (Throwable ex) {
             AriadneReconstructor.enrich(ex, capturedLink);
             throw ex;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 

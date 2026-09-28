@@ -40,15 +40,11 @@ public final class AriadneConsumer<T> implements Consumer<T> {
 
     @Override
     public void accept(T t) {
-        Link previous = AriadneContext.current();
-        AriadneContext.set(capturedLink);
-        try {
+        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
             target.accept(t);
         } catch (Throwable ex) {
             AriadneReconstructor.enrich(ex, capturedLink);
             throw ex;
-        } finally {
-            AriadneContext.set(previous);
         }
     }
 
