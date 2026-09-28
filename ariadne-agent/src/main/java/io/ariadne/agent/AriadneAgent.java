@@ -1,10 +1,5 @@
 package io.ariadne.agent;
 
-import io.ariadne.core.Link;
-import net.bytebuddy.agent.builder.AgentBuilder;
-import net.bytebuddy.agent.builder.ResettableClassFileTransformer;
-import net.bytebuddy.asm.Advice;
-
 import java.lang.instrument.Instrumentation;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
@@ -15,7 +10,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static net.bytebuddy.matcher.ElementMatchers.*;
+import io.ariadne.core.Link;
+import net.bytebuddy.agent.builder.AgentBuilder;
+import net.bytebuddy.agent.builder.ResettableClassFileTransformer;
+import net.bytebuddy.asm.Advice;
+import static net.bytebuddy.matcher.ElementMatchers.hasSuperType;
+import static net.bytebuddy.matcher.ElementMatchers.isInterface;
+import static net.bytebuddy.matcher.ElementMatchers.nameStartsWith;
+import static net.bytebuddy.matcher.ElementMatchers.named;
+import static net.bytebuddy.matcher.ElementMatchers.not;
+import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 /**
  * Main Java Agent entry point for Ariadne.
@@ -63,11 +67,9 @@ public final class AriadneAgent {
                 .assureReadEdgeFromAndTo(inst, Link.class, CompletableFutureAdvice.class, ExecutorAdvice.class)
                 .ignore(
                         nameStartsWith("net.bytebuddy.")
-                                .or(nameStartsWith("io.ariadne.shaded."))
+                                .or(nameStartsWith("io.ariadne."))
                                 .or(nameStartsWith("jdk.internal."))
                                 .or(nameStartsWith("sun."))
-                                .and(not(named("java.util.concurrent.CompletableFuture")))
-                                .and(not(hasSuperType(named("java.util.concurrent.Executor"))))
                 )
                 // CompletableFuture instrumentation
                 .type(named("java.util.concurrent.CompletableFuture"))
@@ -105,6 +107,8 @@ public final class AriadneAgent {
 
         TRANSFORMER = agentBuilder.installOn(inst);
         INSTALLED.set(true);
+
+        io.ariadne.core.AriadneManagement.registerMBean();
     }
 
     private static void tryInjectBootstrapPath(Instrumentation inst) {

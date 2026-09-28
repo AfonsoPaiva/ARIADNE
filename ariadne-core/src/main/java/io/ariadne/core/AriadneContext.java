@@ -56,6 +56,7 @@ public final class AriadneContext {
      * @return New immutable {@link Link}
      */
     public static Link spawn(int siteId) {
+        AriadneMetrics.recordHop();
         return CARRIER.spawn(siteId);
     }
 

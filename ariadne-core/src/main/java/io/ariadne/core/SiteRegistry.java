@@ -89,6 +89,20 @@ public final class SiteRegistry {
     }
 
     /**
+     * Returns the total number of distinct call sites currently registered.
+     */
+    public static int size() {
+        return BY_ID.size();
+    }
+
+    /**
+     * Clears all registered call sites and resets ID generator.
+     */
+    public static void clear() {
+        resetForTests();
+    }
+
+    /**
      * Resets registry state. Intended strictly for test environments.
      */
     static void resetForTests() {

@@ -1,5 +1,12 @@
 package io.ariadne.adapter.rxjava;
 
+import java.lang.reflect.Method;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.reactivestreams.Subscriber;
+
 import io.ariadne.core.AriadneContext;
 import io.ariadne.core.AriadneRunnable;
 import io.ariadne.core.CallSiteMetadata;
@@ -15,12 +22,6 @@ import io.reactivex.rxjava3.functions.BiFunction;
 import io.reactivex.rxjava3.functions.Function;
 import io.reactivex.rxjava3.plugins.RxJavaPlugins;
 import io.reactivex.rxjava3.schedulers.Schedulers;
-import org.reactivestreams.Subscriber;
-
-import java.lang.reflect.Method;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * RxJava 3 adapter providing zero-overhead causal propagation and lazy error reconstruction.
@@ -120,10 +121,17 @@ public final class AriadneRxJavaAdapter {
         INSTALLED.set(true);
 
         // 3. Canary Probe: Execute self-test to ensure the hook is actively intercepted
-        HEALTH_STATUS = runCanaryProbe();
+        if (io.ariadne.core.AriadneConfig.isCanaryProbesEnabled()) {
+            HEALTH_STATUS = runCanaryProbe();
+        } else {
+            HEALTH_STATUS = CanaryProbeResult.success("RxJava 3", "Canary probe disabled via configuration");
+        }
+        io.ariadne.core.AriadneMetrics.recordCanaryResult("RxJava 3", HEALTH_STATUS);
         if (!HEALTH_STATUS.isHealthy()) {
             System.err.println("[Ariadne WARNING] " + HEALTH_STATUS.message());
         }
+
+        io.ariadne.core.AriadneManagement.registerMBean();
     }
 
     /**
@@ -150,6 +158,7 @@ public final class AriadneRxJavaAdapter {
         PREV_FLOWABLE_SUB = null;
 
         HEALTH_STATUS = CanaryProbeResult.failure("RxJava 3", "Adapter was uninstalled");
+        io.ariadne.core.AriadneMetrics.recordCanaryResult("RxJava 3", HEALTH_STATUS);
         INSTALLED.set(false);
     }
 

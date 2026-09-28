@@ -1,7 +1,5 @@
 package io.ariadne.agent;
 
-import io.ariadne.core.*;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -13,6 +11,28 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+
+import io.ariadne.core.AriadneBiConsumer;
+import io.ariadne.core.AriadneBiFunction;
+import io.ariadne.core.AriadneCallable;
+import io.ariadne.core.AriadneConfig;
+import io.ariadne.core.AriadneConsumer;
+import io.ariadne.core.AriadneContext;
+import io.ariadne.core.AriadneFunction;
+import io.ariadne.core.AriadneMXBean;
+import io.ariadne.core.AriadneManagement;
+import io.ariadne.core.AriadneMetrics;
+import io.ariadne.core.AriadneReconstructor;
+import io.ariadne.core.AriadneRunnable;
+import io.ariadne.core.AriadneSupplier;
+import io.ariadne.core.AsyncCausalityException;
+import io.ariadne.core.CallSiteMetadata;
+import io.ariadne.core.CanaryProbeResult;
+import io.ariadne.core.ContextCarrier;
+import io.ariadne.core.Link;
+import io.ariadne.core.SiteRegistry;
+import io.ariadne.core.ThreadLocalContextCarrier;
+import io.ariadne.core.UnsupportedFrameworkVersionException;
 
 /**
  * Injects Ariadne runtime classes into the JVM's Bootstrap ClassLoader search path,
@@ -64,6 +84,10 @@ public final class BootstrapInjector {
                     AriadneBiFunction.class,
                     CanaryProbeResult.class,
                     UnsupportedFrameworkVersionException.class,
+                    AriadneConfig.class,
+                    AriadneMetrics.class,
+                    AriadneMXBean.class,
+                    AriadneManagement.class,
                     CompletableFutureAdvice.class,
                     ExecutorAdvice.class
             };

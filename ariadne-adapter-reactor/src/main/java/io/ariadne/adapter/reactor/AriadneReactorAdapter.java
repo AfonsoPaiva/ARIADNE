@@ -72,10 +72,17 @@ public final class AriadneReactorAdapter {
         INSTALLED.set(true);
 
         // 3. Canary Probe: Execute self-test to ensure the hook is actually intercepted by the framework
-        HEALTH_STATUS = runCanaryProbe();
+        if (io.ariadne.core.AriadneConfig.isCanaryProbesEnabled()) {
+            HEALTH_STATUS = runCanaryProbe();
+        } else {
+            HEALTH_STATUS = CanaryProbeResult.success("Project Reactor", "Canary probe disabled via configuration");
+        }
+        io.ariadne.core.AriadneMetrics.recordCanaryResult("Project Reactor", HEALTH_STATUS);
         if (!HEALTH_STATUS.isHealthy()) {
             System.err.println("[Ariadne WARNING] " + HEALTH_STATUS.message());
         }
+
+        io.ariadne.core.AriadneManagement.registerMBean();
     }
 
     /**
@@ -89,6 +96,7 @@ public final class AriadneReactorAdapter {
         Schedulers.resetOnScheduleHook(HOOK_KEY);
         Hooks.resetOnOperatorError(HOOK_KEY);
         HEALTH_STATUS = CanaryProbeResult.failure("Project Reactor", "Adapter was uninstalled");
+        io.ariadne.core.AriadneMetrics.recordCanaryResult("Project Reactor", HEALTH_STATUS);
         INSTALLED.set(false);
     }
 

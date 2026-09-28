@@ -9,20 +9,9 @@ import java.util.List;
  */
 public final class AriadneReconstructor {
 
-    private static final int DEFAULT_MAX_DEPTH = 32;
-    private static final int MAX_DEPTH;
-
     static {
-        int depth = DEFAULT_MAX_DEPTH;
-        try {
-            String prop = System.getProperty("ariadne.max.depth");
-            if (prop != null && !prop.isBlank()) {
-                depth = Integer.parseInt(prop.trim());
-            }
-        } catch (Exception ignored) {
-            depth = DEFAULT_MAX_DEPTH;
-        }
-        MAX_DEPTH = Math.max(1, depth);
+        // Attempt lazy JMX MBean registration upon first loading reconstructor
+        AriadneManagement.registerMBean();
     }
 
     private AriadneReconstructor() {}
@@ -48,6 +37,7 @@ public final class AriadneReconstructor {
 
         AsyncCausalityException synthetic = buildSyntheticException(link);
         if (synthetic != null) {
+            AriadneMetrics.recordReconstruction();
             target.addSuppressed(synthetic);
         }
     }
@@ -60,11 +50,12 @@ public final class AriadneReconstructor {
             return null;
         }
 
+        int maxDepth = AriadneConfig.getMaxDepth();
         List<StackTraceElement> elements = new ArrayList<>();
         Link current = rootLink;
         int hops = 0;
 
-        while (current != null && hops < MAX_DEPTH) {
+        while (current != null && hops < maxDepth) {
             CallSiteMetadata meta = SiteRegistry.get(current.siteId);
             StackTraceElement element;
             if (meta != null) {
@@ -85,6 +76,11 @@ public final class AriadneReconstructor {
             elements.add(element);
             hops++;
             current = current.parent;
+        }
+
+        if (current != null) {
+            // There was more causality beyond maxDepth
+            AriadneMetrics.recordReconstructionCapped();
         }
 
         if (elements.isEmpty()) {

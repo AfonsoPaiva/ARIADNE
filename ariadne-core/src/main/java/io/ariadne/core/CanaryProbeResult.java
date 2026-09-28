@@ -17,6 +17,10 @@ public record CanaryProbeResult(boolean isHealthy, String framework, String mess
         return new CanaryProbeResult(true, framework, framework + " canary probe successfully verified causality propagation.", null);
     }
 
+    public static CanaryProbeResult success(String framework, String message) {
+        return new CanaryProbeResult(true, framework, message, null);
+    }
+
     public static CanaryProbeResult failure(String framework, String reason) {
         return new CanaryProbeResult(false, framework, framework + " canary probe failed: " + reason, null);
     }
