@@ -14,7 +14,7 @@ import javax.management.ObjectName;
 public final class AriadneManagement implements AriadneMXBean {
 
     public static final String MBEAN_OBJECT_NAME = "io.ariadne:type=AriadneManager";
-    public static final String VERSION = "0.1.0-alpha.1";
+    public static final String VERSION = "0.1.0-alpha.2";
 
     private static final AriadneManagement INSTANCE = new AriadneManagement();
     private static final AtomicBoolean REGISTERED = new AtomicBoolean(false);

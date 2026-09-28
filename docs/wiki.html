@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ariadne Wiki & Technical Reference Manual</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+    :root {
+      --accent-red: #911010;
+      --font-title: 'Source Serif Pro', Georgia, serif;
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --sidebar-width: 280px;
+    }
+
+    /* Dark Mode (Default) - Unicolor #2A2727 */
+    body[data-theme="dark"] {
+      --bg-page: #2A2727;
+      --bg-surface: #201E1E;
+      --border-color: #3F3B3B;
+      --text-main: #D9D9D9;
+      --text-heading: #FFFFFF;
+      --text-muted: #AFAAAA;
+      --code-bg: #1B1919;
+      --code-text: #E8E5E5;
+      --table-header: #1B1919;
+      --theme-btn-bg: #353131;
+      --theme-btn-text: #D9D9D9;
+      --theme-btn-border: #4D4747;
+      --code-inline-bg: #201E1E;
+      --code-inline-border: #3F3B3B;
+    }
+
+    /* Light Mode - Unicolor #D9D9D9 */
+    body[data-theme="light"] {
+      --bg-page: #D9D9D9;
+      --bg-surface: #E8E8E8;
+      --border-color: #B5B5B5;
+      --text-main: #2A2727;
+      --text-heading: #2A2727;
+      --text-muted: #555050;
+      --code-bg: #2A2727;
+      --code-text: #F2EEEE;
+      --table-header: #CDCDCD;
+      --theme-btn-bg: #2A2727;
+      --theme-btn-text: #D9D9D9;
+      --theme-btn-border: #2A2727;
+      --code-inline-bg: #CFCFCF;
+      --code-inline-border: #B5B5B5;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: var(--font-title);
+      font-weight: 700;
+      color: var(--text-heading);
+      letter-spacing: -0.015em;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation Header */
+    header {
+      background-color: var(--bg-page);
+      border-bottom: 2px solid var(--accent-red);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: background-color 0.15s ease;
+    }
+
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 68px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+
+    .brand-logo {
+      height: 34px;
+      width: auto;
+      display: block;
+    }
+
+    body[data-theme="dark"] .logo-light {
+      display: none;
+    }
+    body[data-theme="dark"] .logo-dark {
+      display: block;
+    }
+
+    body[data-theme="light"] .logo-dark {
+      display: none;
+    }
+    body[data-theme="light"] .logo-light {
+      display: block;
+    }
+
+    .brand-sub {
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-red);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+      transition: color 0.15s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--text-heading);
+    }
+
+    .theme-toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: var(--theme-btn-bg);
+      color: var(--theme-btn-text);
+      border: 1px solid var(--theme-btn-border);
+      padding: 6px 14px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn-gh {
+      background-color: var(--accent-red);
+      color: #FFFFFF;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 1px solid var(--accent-red);
+      transition: background-color 0.15s ease;
+    }
+
+    .nav-btn-gh:hover {
+      background-color: #720C0C;
+    }
+
+    /* Wiki Layout */
+    .wiki-wrapper {
+      display: flex;
+      gap: 48px;
+      padding: 48px 0 96px 0;
+    }
+
+    /* Sidebar Table of Contents */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 96px;
+      height: calc(100vh - 120px);
+      overflow-y: auto;
+      padding-right: 16px;
+      border-right: 1px solid var(--border-color);
+      transition: border-color 0.15s ease;
+    }
+
+    .sidebar-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-red);
+      margin-bottom: 16px;
+    }
+
+    .toc-list {
+      list-style: none;
+    }
+
+    .toc-item {
+      margin-bottom: 10px;
+    }
+
+    .toc-link {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      line-height: 1.4;
+      padding: 4px 0;
+      transition: color 0.15s ease;
+    }
+
+    .toc-link:hover {
+      color: var(--text-heading);
+    }
+
+    .toc-link.active {
+      color: var(--text-heading);
+      font-weight: 700;
+      border-left: 2px solid var(--accent-red);
+      padding-left: 8px;
+    }
+
+    /* Main Content Area */
+    .wiki-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .wiki-header {
+      margin-bottom: 48px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .wiki-eyebrow {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent-red);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .wiki-title {
+      font-size: 44px;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      color: var(--text-heading);
+    }
+
+    .wiki-lead {
+      font-size: 18px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Article Sections */
+    .wiki-section {
+      margin-bottom: 64px;
+      scroll-margin-top: 96px;
+    }
+
+    .wiki-section h2 {
+      font-size: 30px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-heading);
+    }
+
+    .wiki-section h3 {
+      font-size: 20px;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      color: var(--text-heading);
+    }
+
+    .wiki-section p {
+      font-size: 15px;
+      color: var(--text-main);
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+
+    .wiki-section ul, .wiki-section ol {
+      margin-bottom: 20px;
+      padding-left: 24px;
+      font-size: 15px;
+      color: var(--text-main);
+    }
+
+    .wiki-section li {
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    /* Callout Box */
+    .callout {
+      background-color: var(--bg-surface);
+      border-left: 4px solid var(--accent-red);
+      border-top: 1px solid var(--border-color);
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      padding: 20px 24px;
+      margin: 24px 0;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    .callout-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-heading);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .callout p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      overflow-x: auto;
+      margin: 24px 0;
+      transition: background-color 0.15s ease, border-color 0.15s ease;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 14px;
+    }
+
+    th {
+      background-color: var(--table-header);
+      color: var(--text-heading);
+      font-weight: 700;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Code Blocks */
+    pre {
+      background-color: var(--code-bg);
+      color: var(--code-text);
+      padding: 20px;
+      border: 1px solid var(--border-color);
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.55;
+      overflow-x: auto;
+      margin: 20px 0;
+    }
+
+    code {
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      background-color: var(--code-inline-bg);
+      color: var(--text-heading);
+      padding: 2px 6px;
+      border: 1px solid var(--code-inline-border);
+    }
+
+    pre code {
+      background-color: transparent;
+      padding: 0;
+      border: none;
+      color: inherit;
+    }
+
+    .comment { color: #8B949E; }
+    .keyword { color: #FF7B72; font-weight: 600; }
+    .type { color: #79C0FF; }
+    .string { color: #A5D6FF; }
+
+    /* Footer (Unicolor) */
+    footer {
+      background-color: var(--bg-page);
+      border-top: 2px solid var(--border-color);
+      padding: 48px 0;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: background-color 0.15s ease;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      color: var(--text-main);
+      font-weight: 600;
+      transition: color 0.15s ease;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-heading);
+    }
+
+    @media (max-width: 900px) {
+      .wiki-wrapper { flex-direction: column; gap: 32px; }
+      .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border-color); padding-bottom: 24px; }
+    }
+  </style>
+</head>
+<body data-theme="dark">
+
+  <!-- Header -->
+  <header>
+    <div class="container nav-inner">
+      <a href="index.html" class="brand" aria-label="Ariadne Home">
+        <img src="Images/lgogo-dark-background.svg" alt="Ariadne" class="brand-logo logo-dark">
+        <img src="Images/logo-white-background.svg" alt="Ariadne" class="brand-logo logo-light">
+        <span class="brand-sub">/ WIKI</span>
+      </a>
+      <nav>
+        <a href="index.html" class="nav-link">Home</a>
+        <a href="index.html#benchmarks" class="nav-link">Benchmarks</a>
+        <a href="index.html#versions" class="nav-link">Versions</a>
+
+        <button id="themeToggle" class="theme-toggle-btn" type="button" aria-label="Toggle light or dark theme">
+          <span id="themeIcon">☀️</span>
+          <span id="themeText">Light Mode</span>
+        </button>
+
+        <a href="https://github.com/AfonsoPaiva/ARIADNE" target="_blank" rel="noopener" class="nav-btn">GitHub Repo</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Content Container -->
+  <div class="container">
+    <div class="wiki-wrapper">
+
+      <!-- Table of Contents Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-title">Table of Contents</div>
+        <ul class="toc-list">
+          <li class="toc-item"><a href="#intro" class="toc-link">1. Introduction & Motivation</a></li>
+          <li class="toc-item"><a href="#the-problem" class="toc-link">2. The Async Blind Spot Problem</a></li>
+          <li class="toc-item"><a href="#architecture" class="toc-link">3. Core Mechanical Architecture</a></li>
+          <li class="toc-item"><a href="#link-primitive" class="toc-link">4. The 24-Byte Link Node</a></li>
+          <li class="toc-item"><a href="#lazy-synthesis" class="toc-link">5. Lazy Backward Synthesis</a></li>
+          <li class="toc-item"><a href="#ecosystem" class="toc-link">6. Modular Ecosystem Overview</a></li>
+          <li class="toc-item"><a href="#agent" class="toc-link">7. Zero-Code Java Agent</a></li>
+          <li class="toc-item"><a href="#reactive" class="toc-link">8. Reactive Framework Adapters</a></li>
+          <li class="toc-item"><a href="#mdc-logging" class="toc-link">9. SLF4J MDC Log Propagation</a></li>
+          <li class="toc-item"><a href="#distributed-tracing" class="toc-link">10. W3C Tracing & OpenTelemetry</a></li>
+          <li class="toc-item"><a href="#scoped-values" class="toc-link">11. Java 21 Scoped Values & Loom</a></li>
+          <li class="toc-item"><a href="#coroutines" class="toc-link">12. Kotlin Coroutines Bridge</a></li>
+          <li class="toc-item"><a href="#jmx-config" class="toc-link">13. Dynamic Configuration & JMX</a></li>
+          <li class="toc-item"><a href="#benchmarks-detail" class="toc-link">14. Microbenchmarks & Performance</a></li>
+          <li class="toc-item"><a href="#getting-started" class="toc-link">15. Getting Started & Installation</a></li>
+        </ul>
+      </aside>
+
+      <!-- Main Wiki Article -->
+      <main class="wiki-content">
+
+        <div class="wiki-header">
+          <div class="wiki-eyebrow">Comprehensive Technical Documentation</div>
+          <h1 class="wiki-title">Ariadne Technical Reference Manual</h1>
+          <p class="wiki-lead">
+            An in-depth guide to Ariadne's internal mechanics, micro-allocation primitives,
+            runtime bytecode instrumentation, reactive stream hooks, and distributed observability bridges.
+          </p>
+        </div>
+
+        <!-- 1. Introduction -->
+        <section class="wiki-section" id="intro">
+          <h2>1. Introduction & Motivation</h2>
+          <p>
+            In Greek mythology, Princess Ariadne gave Theseus a clew of golden thread to unwind as he entered the labyrinth,
+            allowing him to retrace his path backwards and escape after slaying the Minotaur.
+          </p>
+          <p>
+            In modern JVM systems, asynchronous programming models—including thread pools, <code>CompletableFuture</code>,
+            Project Reactor, RxJava, and Java 21 Virtual Threads—create a computational labyrinth. When an execution fails on a
+            worker thread, standard JVM stack traces are severed at the async boundary. Developers are left with blind, truncated
+            exceptions that show where the code crashed, but not <em>who scheduled it</em> or <em>why it was called</em>.
+          </p>
+          <p>
+            <strong>Ariadne</strong> provides the missing thread. It maintains a continuous causal record across threads with
+            sub-microsecond overhead, reconstructing the full asynchronous ancestry only when an error actually occurs.
+          </p>
+        </section>
+
+        <!-- 2. The Problem -->
+        <section class="wiki-section" id="the-problem">
+          <h2>2. The Asynchronous Blind Spot Problem</h2>
+          <p>
+            When a method executes synchronously on a single JVM thread, the thread's call stack directly records the entire hierarchy
+            of callers. If an exception is thrown, <code>Throwable.fillInStackTrace()</code> captures this call stack directly from the JVM frame pointers.
+          </p>
+          <p>
+            However, when execution crosses an asynchronous boundary (for example, submitting a <code>Runnable</code> to an
+            <code>ExecutorService</code> or chaining a <code>Mono.publishOn()</code> in Reactor), the caller thread simply places a task
+            descriptor onto a queue and returns immediately.
+          </p>
+          <div class="callout">
+            <div class="callout-title">The Fundamental Dilemma</div>
+            <p>
+              Traditional debuggers attempt to solve this by creating a <code>new Throwable()</code> on <em>every single operator creation or scheduling call</em>.
+              Because 99.9% of tasks succeed, this generates massive object allocation, triggers heavy Garbage Collection pauses, and incurs a <strong>10x to 100x throughput penalty</strong>.
+              Consequently, tools like Reactor's <code>Hooks.onOperatorDebug()</code> are strictly prohibited in production.
+            </p>
+          </div>
+        </section>
+
+        <!-- 3. Architecture -->
+        <section class="wiki-section" id="architecture">
+          <h2>3. Core Mechanical Architecture</h2>
+          <p>
+            Ariadne resolves this dilemma by decoupling <strong>causal tracking</strong> from <strong>stack trace synthesis</strong>:
+          </p>
+          <ol>
+            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 24-byte pointer node (<code>Link</code>). No stack frames, strings, or Throwables are captured. Allocation takes <strong>3.95 ns</strong> and is eligible for JIT scalar replacement.</li>
+            <li><strong>Execution Time:</strong> The worker thread attaches the <code>Link</code> to its active context for the duration of the task, ensuring nested asynchronous spawns inherit their parent.</li>
+            <li><strong>Failure Time (Exception Path):</strong> If an exception occurs, Ariadne walks the lightweight linked list backwards, queries the interned call-site registry, synthesizes an <code>AsyncCausalityException</code>, and attaches it via <code>Throwable.addSuppressed()</code>.</li>
+          </ol>
+        </section>
+
+        <!-- 4. Link Primitive -->
+        <section class="wiki-section" id="link-primitive">
+          <h2>4. The 24-Byte Link Node</h2>
+          <p>
+            The foundational unit of Ariadne is the immutable <code>io.ariadne.core.Link</code> class. Its memory footprint is strictly minimized:
+          </p>
+          <pre><code><span class="keyword">public final class</span> <span class="type">Link</span> {
+    <span class="keyword">public final</span> <span class="type">Link</span> parent;          <span class="comment">// 8-byte reference (or 4 bytes with CompressedOops)</span>
+    <span class="keyword">public final int</span> siteId;           <span class="comment">// 4-byte integer pointing to SiteRegistry</span>
+    <span class="keyword">public final long</span> threadId;        <span class="comment">// 8-byte primitive caller thread identifier</span>
+    <span class="keyword">public final</span> <span class="type">Object</span> attachment;    <span class="comment">// 8-byte optional context payload (MDC / W3C Trace)</span>
+}</code></pre>
+          <p>
+            Because <code>siteId</code> is a 32-bit integer indexing a global interned array (<code>SiteRegistry</code>), Ariadne never allocates string objects or stack frame arrays during normal scheduling.
+          </p>
+        </section>
+
+        <!-- 5. Lazy Backward Synthesis -->
+        <section class="wiki-section" id="lazy-synthesis">
+          <h2>5. Lazy Backward Synthesis</h2>
+          <p>
+            When an exception escapes an instrumented task, <code>AriadneReconstructor.enrich(Throwable)</code> activates:
+          </p>
+          <ul>
+            <li>Traverses the <code>Link</code> hierarchy up to a configurable maximum depth (default: <code>32</code> hops).</li>
+            <li>Resolves each <code>siteId</code> to its class name, method name, file name, and line number from the <code>SiteRegistry</code>.</li>
+            <li>Constructs an <code>AsyncCausalityException</code> containing synthetic <code>StackTraceElement</code> frames labeled with <code>[Async Hop N]</code>.</li>
+            <li>Appends context payloads (such as W3C <code>traceId</code> or MDC diagnostic maps) to the exception message.</li>
+            <li>Attaches the synthesized cause to the original throwable using <code>Throwable.addSuppressed()</code>, preserving the original exception class and stack.</li>
+          </ul>
+        </section>
+
+        <!-- 6. Ecosystem -->
+        <section class="wiki-section" id="ecosystem">
+          <h2>6. Modular Ecosystem Overview</h2>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Module</th>
+                  <th>Artifact</th>
+                  <th>Primary Responsibility</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Core</strong></td>
+                  <td><code>ariadne-core</code></td>
+                  <td>Micro-allocation engine, <code>Link</code>, <code>ContextCarrier</code>, <code>W3CTraceContext</code>, and reconstructor. Zero external dependencies.</td>
+                </tr>
+                <tr>
+                  <td><strong>Agent</strong></td>
+                  <td><code>ariadne-agent</code></td>
+                  <td>ByteBuddy Java Agent for zero-code instrumentation of thread pools and virtual threads.</td>
+                </tr>
+                <tr>
+                  <td><strong>Reactor</strong></td>
+                  <td><code>ariadne-adapter-reactor</code></td>
+                  <td>Scheduler decorator and operator error hooks for Project Reactor.</td>
+                </tr>
+                <tr>
+                  <td><strong>RxJava</strong></td>
+                  <td><code>ariadne-adapter-rxjava</code></td>
+                  <td>Schedule handlers for RxJava 3 schedulers (computation, io, single).</td>
+                </tr>
+                <tr>
+                  <td><strong>MDC</strong></td>
+                  <td><code>ariadne-adapter-mdc</code></td>
+                  <td>Transparent propagation of SLF4J Mapped Diagnostic Context across threads.</td>
+                </tr>
+                <tr>
+                  <td><strong>Benchmarks</strong></td>
+                  <td><code>ariadne-benchmarks</code></td>
+                  <td>Comprehensive JMH microbenchmark harness.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 7. Agent -->
+        <section class="wiki-section" id="agent">
+          <h2>7. Zero-Code Java Agent</h2>
+          <p>
+            The <code>ariadne-agent</code> module is packaged as a standard Java Agent using ByteBuddy:
+          </p>
+          <pre><code>java -javaagent:ariadne-agent-0.1.0-alpha.2.jar -jar application.jar</code></pre>
+          <p>
+            Upon JVM startup, the agent dynamically attaches byte-code advice to:
+          </p>
+          <ul>
+            <li><code>java.util.concurrent.Executor.execute(Runnable)</code></li>
+            <li><code>java.util.concurrent.ExecutorService.submit(Callable)</code></li>
+            <li><code>java.util.concurrent.ExecutorService.submit(Runnable)</code></li>
+            <li><code>java.util.concurrent.ForkJoinPool.execute(ForkJoinTask)</code></li>
+            <li><code>java.util.concurrent.CompletableFuture</code> asynchronous supplier and action stages.</li>
+            <li>Java 21 <code>Thread.ofVirtual().start(Runnable)</code>.</li>
+          </ul>
+          <p>
+            The agent automatically checks for the presence of Project Reactor, RxJava, and SLF4J on the application classpath and installs the corresponding adapters without requiring configuration.
+          </p>
+        </section>
+
+        <!-- 8. Reactive -->
+        <section class="wiki-section" id="reactive">
+          <h2>8. Reactive Framework Adapters</h2>
+          <h3>Project Reactor (<code>ariadne-adapter-reactor</code>)</h3>
+          <p>
+            Attaches to Reactor via <code>Schedulers.onScheduleHook()</code> and <code>Hooks.onOperatorError()</code>.
+            When a task is scheduled on <code>Schedulers.boundedElastic()</code> or <code>Schedulers.parallel()</code>,
+            the active <code>Link</code> is automatically captured and restored during subscription and emission.
+          </p>
+          <h3>RxJava 3 (<code>ariadne-adapter-rxjava</code>)</h3>
+          <p>
+            Utilizes <code>RxJavaPlugins.setOnScheduleHandler()</code> to wrap <code>Runnable</code> instances before they are dispatched
+            to <code>Schedulers.io()</code> or <code>Schedulers.computation()</code>.
+          </p>
+        </section>
+
+        <!-- 9. MDC Logging -->
+        <section class="wiki-section" id="mdc-logging">
+          <h2>9. SLF4J MDC Log Propagation</h2>
+          <p>
+            In distributed microservices, correlation identifiers such as <code>traceId</code>, <code>spanId</code>, and <code>userId</code>
+            are placed in the SLF4J <code>MDC</code> (Mapped Diagnostic Context). Because MDC relies on <code>ThreadLocal</code>, switching threads
+            causes all contextual logging data to vanish.
+          </p>
+          <p>
+            With <code>ariadne-adapter-mdc</code>:
+          </p>
+          <ol>
+            <li>When <code>AriadneContext.spawn()</code> occurs, the adapter captures a snapshot via <code>MDC.getCopyOfContextMap()</code>.</li>
+            <li>When the worker thread executes the task, it binds the snapshot to the worker thread's MDC.</li>
+            <li>When the task completes, it cleans up and restores the previous thread context, preventing thread-pool cross-contamination.</li>
+          </ol>
+        </section>
+
+        <!-- 10. Distributed Tracing -->
+        <section class="wiki-section" id="distributed-tracing">
+          <h2>10. W3C Tracing & OpenTelemetry</h2>
+          <p>
+            Ariadne natively implements the W3C Trace Context specification via <code>W3CTraceContext</code>:
+          </p>
+          <ul>
+            <li>Parses and formats <code>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code>.</li>
+            <li>Generates 128-bit trace IDs and 64-bit span IDs.</li>
+            <li>Injects and extracts headers into/from HTTP request headers.</li>
+          </ul>
+          <p>
+            Additionally, <code>AriadneOtelAdapter</code> provides a reflection bridge to OpenTelemetry's <code>Span.current()</code>,
+            synchronizing distributed spans with internal JVM causality without introducing compile-time dependencies.
+          </p>
+        </section>
+
+        <!-- 11. Scoped Values -->
+        <section class="wiki-section" id="scoped-values">
+          <h2>11. Java 21 Scoped Values & Loom</h2>
+          <p>
+            In Java 21, millions of lightweight Virtual Threads can be created concurrently. Traditional <code>ThreadLocal</code> variables
+            can create unexpected memory retention if not aggressively pruned.
+          </p>
+          <p>
+            Ariadne provides <code>ScopedValueContextCarrier</code>, utilizing JDK 21 <code>java.lang.ScopedValue</code>:
+          </p>
+          <ul>
+            <li>Values are immutable and bound strictly to lexical execution scopes.</li>
+            <li>Provides <code>runWhere(Link, Runnable)</code> and <code>callWhere(Link, Callable)</code>.</li>
+            <li>Implemented dynamically via reflection so enterprise applications compile on standard Java 21 LTS without requiring <code>--enable-preview</code>.</li>
+          </ul>
+        </section>
+
+        <!-- 12. Coroutines -->
+        <section class="wiki-section" id="coroutines">
+          <h2>12. Kotlin Coroutines Bridge</h2>
+          <p>
+            When using Kotlin Coroutines, tasks suspend and resume across different threads and dispatchers.
+            <code>AriadneCoroutineBridge.asElement()</code> dynamically instantiates a <code>kotlinx.coroutines.ThreadContextElement</code>
+            via Java dynamic proxies:
+          </p>
+          <pre><code><span class="comment">// In Kotlin coroutine code:</span>
+withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> CoroutineContext) {
+    <span class="comment">// Causality is strictly maintained across suspend/resume points</span>
+    fetchOrder()
+}</code></pre>
+        </section>
+
+        <!-- 13. JMX & Config -->
+        <section class="wiki-section" id="jmx-config">
+          <h2>13. Dynamic Configuration & JMX</h2>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>System Property</th>
+                  <th>Environment Variable</th>
+                  <th>Default</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ariadne.max.depth</code></td>
+                  <td><code>ARIADNE_MAX_DEPTH</code></td>
+                  <td>32</td>
+                  <td>Maximum async causality hops reconstructed (1 to 1024).</td>
+                </tr>
+                <tr>
+                  <td><code>ariadne.canary.probes.enabled</code></td>
+                  <td><code>ARIADNE_CANARY_PROBES_ENABLED</code></td>
+                  <td>true</td>
+                  <td>Enables automated self-tests on adapter startup.</td>
+                </tr>
+                <tr>
+                  <td><code>ariadne.fail.fast</code></td>
+                  <td><code>ARIADNE_FAIL_FAST</code></td>
+                  <td>false</td>
+                  <td>Throws exceptions immediately if framework hooks conflict.</td>
+                </tr>
+                <tr>
+                  <td><code>ariadne.mdc.enabled</code></td>
+                  <td><code>ARIADNE_MDC_ENABLED</code></td>
+                  <td>true</td>
+                  <td>Controls automatic SLF4J MDC context propagation.</td>
+                </tr>
+                <tr>
+                  <td><code>ariadne.jmx.enabled</code></td>
+                  <td><code>ARIADNE_JMX_ENABLED</code></td>
+                  <td>true</td>
+                  <td>Registers MBean <code>io.ariadne:type=AriadneManager</code>.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 14. Benchmarks -->
+        <section class="wiki-section" id="benchmarks-detail">
+          <h2>14. Microbenchmarks & Performance</h2>
+          <p>
+            Conducted using <strong>JMH 1.37</strong> on Linux (Java 21 LTS, isolated forks, compiler blackholes):
+          </p>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Benchmark Operation</th>
+                  <th>Observed Latency</th>
+                  <th>Performance Analysis</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Context Lookup</strong></td>
+                  <td>1.59 ns</td>
+                  <td>Near L1 CPU cache access speed.</td>
+                </tr>
+                <tr>
+                  <td><strong>Link Node Allocation</strong></td>
+                  <td>3.95 ns</td>
+                  <td>Immutable 24-byte object, candidate for scalar replacement.</td>
+                </tr>
+                <tr>
+                  <td><strong>Scoped Attach & Close</strong></td>
+                  <td>5.35 ns</td>
+                  <td>Full try-with-resources lifecycle.</td>
+                </tr>
+                <tr>
+                  <td><strong>Added Async Hop Overhead</strong></td>
+                  <td>~148 ns</td>
+                  <td>Negligible compared to OS thread scheduler jitter (typically 1-5 µs).</td>
+                </tr>
+                <tr>
+                  <td><strong>Reactive 100-Element Stream</strong></td>
+                  <td>+0.68 µs</td>
+                  <td>Less than 6% overhead across 100 asynchronous items.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 15. Getting Started -->
+        <section class="wiki-section" id="getting-started">
+          <h2>15. Getting Started & Installation</h2>
+          <h3>Option A: Zero-Code Java Agent (Recommended)</h3>
+          <p>
+            Download <code>ariadne-agent-0.1.0-alpha.2.jar</code> from the <a href="https://github.com/AfonsoPaiva/ARIADNE/releases" target="_blank" rel="noopener" style="color: var(--accent-red); font-weight: 700; text-decoration: underline;">GitHub Releases</a> page and add the flag to your JVM startup script:
+          </p>
+          <pre><code>java -javaagent:/path/to/ariadne-agent-0.1.0-alpha.2.jar -jar your-app.jar</code></pre>
+
+          <h3>Option B: Programmatic Maven Dependency</h3>
+          <pre><code>&lt;dependency&gt;
+    &lt;groupId&gt;io.ariadne&lt;/groupId&gt;
+    &lt;artifactId&gt;ariadne-core&lt;/artifactId&gt;
+    &lt;version&gt;0.1.0-alpha.2&lt;/version&gt;
+&lt;/dependency&gt;</code></pre>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div>
+        <p><strong>Ariadne Documentation</strong> — Distributed under the Apache License 2.0.</p>
+        <p style="margin-top: 4px; font-size: 13px;">Zero-Overhead Asynchronous Causality Stack Tracing for the JVM.</p>
+      </div>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="index.html#versions">Releases</a>
+        <a href="https://github.com/AfonsoPaiva/ARIADNE" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function() {
+      const toggle = document.getElementById('themeToggle');
+      const text = document.getElementById('themeText');
+      const icon = document.getElementById('themeIcon');
+      
+      const savedTheme = localStorage.getItem('ariadne-theme') || 'dark';
+      applyTheme(savedTheme);
+
+      toggle.addEventListener('click', function() {
+        const current = document.body.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+      });
+
+      function applyTheme(theme) {
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('ariadne-theme', theme);
+        if (theme === 'dark') {
+          text.textContent = 'Light Mode';
+          icon.textContent = '☀️';
+        } else {
+          text.textContent = 'Dark Mode';
+          icon.textContent = '🌙';
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
