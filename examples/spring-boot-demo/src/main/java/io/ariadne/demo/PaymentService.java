@@ -18,4 +18,8 @@ public class PaymentService {
             throw new IllegalStateException("Payment gateway connection timeout [orderId=" + orderId + "]");
         });
     }
+
+    public CompletableFuture<String> processPaymentSuccess(String orderId) {
+        return CompletableFuture.supplyAsync(() -> "TX-" + orderId);
+    }
 }

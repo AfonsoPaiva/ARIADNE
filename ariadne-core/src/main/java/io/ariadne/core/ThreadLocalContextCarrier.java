@@ -106,10 +106,58 @@ public final class ThreadLocalContextCarrier implements ContextCarrier {
         return rebuilt;
     }
 
+    private final ThreadLocal<ReusableScope> pool = ThreadLocal.withInitial(() -> {
+        ReusableScope s1 = new ReusableScope(this);
+        ReusableScope s2 = new ReusableScope(this);
+        s1.next = s2;
+        return s1;
+    });
+
     @Override
-    public Scope attach(Link link) {
+    public AriadneContext.Scope attach(Link link) {
         Link previous = current();
         set(link);
-        return () -> set(previous);
+
+        ReusableScope scope = pool.get();
+        if (scope != null) {
+            pool.set(scope.next);
+            scope.next = null;
+            scope.init(previous);
+            return scope;
+        }
+        ReusableScope fresh = new ReusableScope(this);
+        fresh.init(previous);
+        return fresh;
+    }
+
+    /**
+     * Reusable, zero-allocation Scope implementation for try-with-resources blocks.
+     */
+    public static final class ReusableScope implements AriadneContext.Scope {
+        private final ThreadLocalContextCarrier carrier;
+        private Link previous;
+        private ReusableScope next;
+        private boolean closed = false;
+
+        ReusableScope(ThreadLocalContextCarrier carrier) {
+            this.carrier = carrier;
+        }
+
+        void init(Link previous) {
+            this.previous = previous;
+            this.closed = false;
+        }
+
+        @Override
+        public void close() {
+            if (closed) {
+                return;
+            }
+            closed = true;
+            carrier.set(previous);
+            this.previous = null;
+            this.next = carrier.pool.get();
+            carrier.pool.set(this);
+        }
     }
 }

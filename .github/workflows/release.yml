@@ -35,9 +35,15 @@ jobs:
             -prof gc \
             -wi 5 -w 1s -i 5 -r 1s -f 3
 
+      - name: Generate Benchmark Summary Table
+        run: |
+          python3 scripts/generate_benchmark_tables.py benchmark-results.json --format md > benchmark-table.md
+          cat benchmark-table.md >> $GITHUB_STEP_SUMMARY
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: benchmark-table.md
           files: |
             ariadne-agent/target/ariadne-agent-*.jar
             ariadne-core/target/ariadne-core-*.jar
@@ -46,5 +52,6 @@ jobs:
             ariadne-adapter-mdc/target/ariadne-adapter-mdc-*.jar
             ariadne-benchmarks/target/benchmarks.jar
             benchmark-results.json
+            scripts/generate_benchmark_tables.py
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true

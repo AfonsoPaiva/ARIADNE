@@ -30,6 +30,12 @@ public class OrderService {
                 .thenApply(paymentRef -> "Order Confirmed: " + paymentRef);
     }
 
+    @Async
+    public CompletableFuture<String> placeOrderAsyncSuccess(String orderId) {
+        return paymentService.processPaymentSuccess(orderId)
+                .thenApply(paymentRef -> "Order Confirmed: " + paymentRef);
+    }
+
     /**
      * Demonstrates reactive pipeline execution via Project Reactor / WebFlux.
      */

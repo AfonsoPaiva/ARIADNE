@@ -75,6 +75,16 @@ public class ThreadPoolPropagationBenchmark {
     }
 
     @Benchmark
+    public Integer completableFutureSingleHopBaseline() {
+        return CompletableFuture.supplyAsync(() -> 42, platformPool).join();
+    }
+
+    @Benchmark
+    public Integer completableFutureSingleHopWrapped() {
+        return CompletableFuture.supplyAsync(AriadneSupplier.wrap(() -> 42), platformPool).join();
+    }
+
+    @Benchmark
     public Integer completableFutureMultiHopBaseline() {
         return CompletableFuture.supplyAsync(() -> 1, platformPool)
                 .thenApplyAsync(x -> x + 1, platformPool)

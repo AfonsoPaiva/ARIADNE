@@ -44,9 +44,9 @@ jobs:
             -rf json \
             -rff benchmark-results.json \
             -prof gc \
-            -wi ${{ github.event.inputs.warmup_iterations || '2' }} -w 1s \
-            -i ${{ github.event.inputs.measurement_iterations || '3' }} -r 1s \
-            -f ${{ github.event.inputs.forks || '1' }}
+            -wi ${{ github.event.inputs.warmup_iterations || '5' }} -w 1s \
+            -i ${{ github.event.inputs.measurement_iterations || '5' }} -r 1s \
+            -f ${{ github.event.inputs.forks || '3' }}
 
       - name: Publish Benchmark Step Summary
         if: always()

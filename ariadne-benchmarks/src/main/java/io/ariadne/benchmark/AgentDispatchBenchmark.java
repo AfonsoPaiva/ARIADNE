@@ -46,6 +46,11 @@ public class AgentDispatchBenchmark {
     @TearDown
     public void tearDown() {
         pool.shutdown();
+        long hops = io.ariadne.core.AriadneMetrics.getHopsSpawned();
+        System.out.printf("%n[AgentDispatchBenchmark] Verified Causal Interception: AriadneMetrics.getHopsSpawned() = %,d hops%n", hops);
+        if (hops <= 0) {
+            throw new IllegalStateException("CRITICAL PROOF FAILURE: Ariadne Agent was not attached! getHopsSpawned() is 0.");
+        }
     }
 
     @Benchmark

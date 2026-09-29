@@ -927,7 +927,7 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
         <section class="wiki-section" id="benchmarks-detail">
           <h2>14. Microbenchmarks & Performance</h2>
           <p>
-            Conducted using <strong>JMH 1.37</strong> on Linux (Java 21 LTS, isolated forks, compiler blackholes):
+            Conducted using <strong>JMH 1.37</strong> on Linux (Java 21 LTS, 3+ isolated JVM forks, 5 warmup + 5 measurement iterations, compiler blackholes, <code>-prof gc</code>):
           </p>
           <div class="table-container">
             <table>
@@ -941,28 +941,38 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
               <tbody>
                 <tr>
                   <td><strong>Context Lookup (<code>current()</code>)</strong></td>
-                  <td>~2 ns</td>
+                  <td>~2.7 ns</td>
                   <td><strong>0 B</strong> — Acesso direto via ThreadLocal carrier na velocidade de cache L1.</td>
                 </tr>
                 <tr>
                   <td><strong>Link Node Allocation</strong></td>
-                  <td>&lt; 4 ns</td>
+                  <td>&lt; 3 ns</td>
                   <td><strong>40 B</strong> — Pegada exata do objeto sob 64-bit JVM com Compressed OOPs.</td>
                 </tr>
                 <tr>
                   <td><strong>Context Hop (<code>spawn</code>)</strong></td>
-                  <td>&lt; 5 ns</td>
+                  <td>&lt; 6 ns</td>
                   <td><strong>40 B</strong> — Alocação atômica em TLAB + verificação de profundidade.</td>
                 </tr>
                 <tr>
-                  <td><strong>Scoped Attach &amp; Close</strong></td>
-                  <td>&lt; 8 ns</td>
-                  <td><strong>0 B</strong> — Ciclo try-with-resources restaurando o link anterior.</td>
+                  <td><strong>Scoped Attach &amp; Close (<code>contextAttachAndScope</code>)</strong></td>
+                  <td>~14.9 ns</td>
+                  <td><strong>0 B</strong> — <code>ThreadLocal</code> pooling de <code>ReusableScope</code> (zero alocação no try-with-resources).</td>
                 </tr>
                 <tr>
-                  <td><strong>Cached Site Lookup</strong></td>
-                  <td>&lt; 5 ns</td>
-                  <td><strong>0 B</strong> — Cache <code>BY_DESCRIPTION</code> lock-free (zero alocação transitória).</td>
+                  <td><strong>Cached Site Lookup (<code>cachedSiteRegistryLookup</code>)</strong></td>
+                  <td>~1.28 ns</td>
+                  <td><strong>0 B</strong> — Cache <code>BY_DESCRIPTION</code> lock-free com lookup direto (zero alocação transitória).</td>
+                </tr>
+                <tr>
+                  <td><strong>Single-Hop CompletableFuture (Agent)</strong></td>
+                  <td>27.99 µs vs 28.62 µs baseline</td>
+                  <td><strong>360 B / op</strong> — Sem overhead estatístico (+0%), com prova ativa de interceptação (<code>getHopsSpawned() &gt; 0</code>).</td>
+                </tr>
+                <tr>
+                  <td><strong>Multi-Hop CompletableFuture (Agent)</strong></td>
+                  <td>~1 a 2 µs por pipeline de 3 hops</td>
+                  <td><strong>~230 B por hop</strong> (nó <code>Link</code> 40 B + wrappers + nó de continuação JDK).</td>
                 </tr>
                 <tr>
                   <td><strong>Project Reactor Pipeline</strong></td>
@@ -970,13 +980,16 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
                   <td><strong>~5x menos alocação</strong> do que <code>Hooks.onOperatorDebug()</code> nativo.</td>
                 </tr>
                 <tr>
-                  <td><strong>Agente com CompletableFuture</strong></td>
-                  <td>~1 a 2 µs (pipeline 3 hops)</td>
-                  <td><strong>~230 B por hop</strong> (nó <code>Link</code> 40 B + wrappers + nó de continuação JDK).</td>
+                  <td><strong>Spring Boot sob Carga (16 Workers, 25k Reqs)</strong></td>
+                  <td><strong>145.389 req/s</strong> vs 138.506 req/s baseline</td>
+                  <td><strong>p50: 86.9 µs (+1.9% delta)</strong>, p99: 427.9 µs tail; <strong>30.002 causal hops</strong> ativamente rastreados.</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 12px;">
+            Todos os resultados brutos em JSON (<code>benchmark-results.json</code>) e o script utilitário de geração de tabelas (<code>scripts/generate_benchmark_tables.py</code>) são anexados e publicados a cada release no GitHub.
+          </p>
         </section>
 
         <!-- 15. Static State Architecture & Operational Limitations -->

@@ -77,6 +77,9 @@ public final class AriadneContext {
      */
     public static Scope attach(Link link) {
         ContextCarrier.Scope scope = CARRIER.attach(link);
+        if (scope instanceof Scope s) {
+            return s;
+        }
         return scope::close;
     }
 
@@ -102,7 +105,7 @@ public final class AriadneContext {
      * Scoped handle for restoring previous context.
      */
     @FunctionalInterface
-    public interface Scope extends AutoCloseable {
+    public interface Scope extends ContextCarrier.Scope {
         @Override
         void close();
     }
