@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <a href="docs/wiki.html">
+  <a href="https://afonsopaiva.github.io/ARIADNE/wiki.html">
     <img src="https://img.shields.io/badge/📖_Explore-Technical_Wiki_%26_Docs-911010?style=for-the-badge" alt="Technical Wiki">
   </a>
   <a href="https://github.com/AfonsoPaiva/ARIADNE/releases">
@@ -182,7 +182,7 @@ mvn test-compile
 
 For complete architectural deep-dives, JMX MBean monitoring (`io.ariadne:type=AriadneManager`), bytecode transformation internals, Canary Probes, and distributed tracing bridges (W3C / OpenTelemetry / Kotlin Coroutines), visit the:
 
-👉 **[Ariadne Technical Wiki & Reference Manual](docs/wiki.html)**
+👉 **[Ariadne Technical Wiki & Reference Manual](https://afonsopaiva.github.io/ARIADNE/wiki.html)**
 
 ---
 
