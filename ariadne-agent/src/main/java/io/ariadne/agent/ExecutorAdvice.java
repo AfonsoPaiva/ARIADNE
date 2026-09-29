@@ -26,8 +26,6 @@ public final class ExecutorAdvice {
     private ExecutorAdvice() {}
 
     public static class Execute {
-        public static volatile int cachedSiteId;
-
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
             if (runnable != null && !(runnable instanceof AriadneRunnable)) {
@@ -35,28 +33,18 @@ public final class ExecutorAdvice {
                 if (SUBMIT_ACTIVE.get()) {
                     return;
                 }
-                int siteId = cachedSiteId;
-                if (siteId == 0) {
-                    siteId = SiteRegistry.getOrRegister("Executor.execute");
-                    cachedSiteId = siteId;
-                }
+                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "Executor.execute");
                 runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
             }
         }
     }
 
     public static class SubmitCallable {
-        public static volatile int cachedSiteId;
-
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Callable<?> callable) {
             if (callable != null && !(callable instanceof AriadneCallable)) {
                 SUBMIT_ACTIVE.set(Boolean.TRUE);
-                int siteId = cachedSiteId;
-                if (siteId == 0) {
-                    siteId = SiteRegistry.getOrRegister("ExecutorService.submit(Callable)");
-                    cachedSiteId = siteId;
-                }
+                int siteId = SiteRegistry.getOrRegister(callable.getClass(), "ExecutorService.submit(Callable)");
                 callable = AriadneCallable.wrap(callable, AriadneContext.spawn(siteId));
             }
         }
@@ -68,17 +56,11 @@ public final class ExecutorAdvice {
     }
 
     public static class SubmitRunnable {
-        public static volatile int cachedSiteId;
-
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
             if (runnable != null && !(runnable instanceof AriadneRunnable)) {
                 SUBMIT_ACTIVE.set(Boolean.TRUE);
-                int siteId = cachedSiteId;
-                if (siteId == 0) {
-                    siteId = SiteRegistry.getOrRegister("ExecutorService.submit(Runnable)");
-                    cachedSiteId = siteId;
-                }
+                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ExecutorService.submit(Runnable)");
                 runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
             }
         }

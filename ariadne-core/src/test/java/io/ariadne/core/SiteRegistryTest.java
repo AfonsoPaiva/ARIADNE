@@ -79,4 +79,38 @@ class SiteRegistryTest {
         assertThat(SiteRegistry.size()).isEqualTo(0);
         assertThat(SiteRegistry.get(id1)).isNull();
     }
+
+    @Test
+    void shouldExtractAndCacheUserCallSiteFromLambdaClass() {
+        Runnable lambdaTask = () -> {};
+        Class<?> lambdaClass = lambdaTask.getClass();
+
+        int id1 = SiteRegistry.getOrRegister(lambdaClass, "Fallback.execute");
+        int id2 = SiteRegistry.getOrRegister(lambdaClass, "Fallback.execute");
+
+        assertThat(id1).isGreaterThan(0);
+        assertThat(id1).isEqualTo(id2);
+
+        CallSiteMetadata metadata = SiteRegistry.get(id1);
+        assertThat(metadata).isNotNull();
+        // The enclosing class must be SiteRegistryTest (not io.ariadne.agent or Fallback)
+        assertThat(metadata.className()).isEqualTo(SiteRegistryTest.class.getName());
+        assertThat(metadata.fileName()).isEqualTo("SiteRegistryTest.java");
+        assertThat(metadata.methodName()).isEqualTo("lambda");
+
+        StackTraceElement element = metadata.toStackTraceElement();
+        assertThat(element.getClassName()).isEqualTo(SiteRegistryTest.class.getName());
+        assertThat(element.getFileName()).isEqualTo("SiteRegistryTest.java");
+    }
+
+    @Test
+    void shouldFallbackWhenInfrastructureClassProvided() {
+        // Infrastructure class should use the fallback description
+        Class<?> infraClass = java.util.concurrent.FutureTask.class;
+        int id = SiteRegistry.getOrRegister(infraClass, "Executor.execute");
+
+        CallSiteMetadata metadata = SiteRegistry.get(id);
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.description()).isEqualTo("Executor.execute");
+    }
 }

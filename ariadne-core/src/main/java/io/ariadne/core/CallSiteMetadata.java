@@ -12,6 +12,7 @@ public final class CallSiteMetadata {
     private final String fileName;
     private final int lineNumber;
     private final String description;
+    private volatile int siteId = 0;
 
     public CallSiteMetadata(String className, String methodName, String fileName, int lineNumber, String description) {
         this.className = className != null ? className : "unknown";
@@ -19,6 +20,14 @@ public final class CallSiteMetadata {
         this.fileName = fileName;
         this.lineNumber = lineNumber;
         this.description = description;
+    }
+
+    public int siteId() {
+        return siteId;
+    }
+
+    public void setSiteId(int siteId) {
+        this.siteId = siteId;
     }
 
     public CallSiteMetadata(String className, String methodName, String fileName, int lineNumber) {

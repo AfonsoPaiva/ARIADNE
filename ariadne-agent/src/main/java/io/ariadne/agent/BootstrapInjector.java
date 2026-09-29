@@ -110,6 +110,16 @@ public final class BootstrapInjector {
         for (Class<?> inner : clazz.getDeclaredClasses()) {
             addClassAndInners(jos, inner);
         }
+        ClassLoader cl = clazz.getClassLoader();
+        for (int i = 1; i <= 20; i++) {
+            String anonName = clazz.getName() + "$" + i;
+            try {
+                Class<?> anonClass = (cl != null) ? cl.loadClass(anonName) : Class.forName(anonName);
+                addClassAndInners(jos, anonClass);
+            } catch (ClassNotFoundException ignored) {
+                break;
+            }
+        }
     }
 
     private static void addClass(JarOutputStream jos, Class<?> clazz) throws IOException {
