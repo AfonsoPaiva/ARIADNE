@@ -95,10 +95,10 @@ java -javaagent:ariadne-agent-0.1.0-alpha.2.jar -jar your-application.jar
 ```
 
 The agent automatically instruments:
-- `java.util.concurrent.Executor` & `ExecutorService` (including ThreadPoolExecutor, ScheduledThreadPoolExecutor)
-- `java.util.concurrent.CompletableFuture` (`supplyAsync`, `runAsync`, `then*Async`, `handleAsync`, `whenCompleteAsync`)
+- `java.util.concurrent.Executor`, `ExecutorService` & `ScheduledExecutorService` (`execute`, `submit`, `schedule`, `scheduleAtFixedRate`, `scheduleWithFixedDelay`)
+- `java.util.concurrent.CompletableFuture` (`supplyAsync`, `runAsync`, `then*Async`, `handleAsync`, `whenCompleteAsync`, `delayedExecutor`)
 - `java.util.concurrent.ForkJoinPool` (via `ExecutorService.execute(Runnable)` / `submit`)
-- Java 21 Virtual Threads (via `Executors.newVirtualThreadPerTaskExecutor()`)
+- Java 21 Virtual Threads (via `Thread.ofVirtual().start()`, `Thread.startVirtualThread()`, and `Executors.newVirtualThreadPerTaskExecutor()`)
 - Project Reactor & RxJava 3 schedulers and error hooks
 - SLF4J MDC context propagation (automatic snapshotting across boundaries)
 

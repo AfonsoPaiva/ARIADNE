@@ -3,6 +3,7 @@ package io.ariadne.agent;
 import java.lang.instrument.Instrumentation;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
@@ -64,11 +65,12 @@ public final class AriadneAgent {
                 .with(AgentBuilder.InitializationStrategy.NoOp.INSTANCE)
                 .with(AgentBuilder.TypeStrategy.Default.REDEFINE)
                 .with(AgentBuilder.Listener.StreamWriting.toSystemError().withErrorsOnly())
-                .assureReadEdgeFromAndTo(inst, Link.class, CompletableFutureAdvice.class, ExecutorAdvice.class)
+                .assureReadEdgeFromAndTo(inst, Link.class, CompletableFutureAdvice.class, ExecutorAdvice.class, ThreadAdvice.class)
                 .ignore(
                         nameStartsWith("net.bytebuddy.")
                                 .or(nameStartsWith("io.ariadne."))
                                 .or(nameStartsWith("jdk.internal."))
+                                .or(nameStartsWith("jdk.proxy"))
                                 .or(nameStartsWith("sun."))
                 )
                 // CompletableFuture instrumentation
@@ -91,7 +93,7 @@ public final class AriadneAgent {
                         .visit(Advice.to(CompletableFutureAdvice.WhenCompleteAsync.class)
                                 .on(named("whenCompleteAsync").and(takesArguments(BiConsumer.class).or(takesArguments(BiConsumer.class, Executor.class)))))
                 )
-                // Executor & ExecutorService implementations
+                // Executor & ExecutorService & ScheduledExecutorService implementations
                 .type(hasSuperType(named("java.util.concurrent.Executor"))
                         .and(not(isInterface()))
                         .and(not(nameStartsWith("java.util.concurrent.CompletableFuture"))))
@@ -103,6 +105,32 @@ public final class AriadneAgent {
                         .visit(Advice.to(ExecutorAdvice.SubmitRunnable.class)
                                 .on(named("submit").and(takesArguments(Runnable.class)
                                         .or(takesArguments(Runnable.class, Object.class)))))
+                        .visit(Advice.to(ExecutorAdvice.ScheduleRunnable.class)
+                                .on(named("schedule").and(takesArguments(Runnable.class, long.class, TimeUnit.class))))
+                        .visit(Advice.to(ExecutorAdvice.ScheduleCallable.class)
+                                .on(named("schedule").and(takesArguments(Callable.class, long.class, TimeUnit.class))))
+                        .visit(Advice.to(ExecutorAdvice.ScheduleAtFixedRate.class)
+                                .on(named("scheduleAtFixedRate").and(takesArguments(Runnable.class, long.class, long.class, TimeUnit.class))))
+                        .visit(Advice.to(ExecutorAdvice.ScheduleWithFixedDelay.class)
+                                .on(named("scheduleWithFixedDelay").and(takesArguments(Runnable.class, long.class, long.class, TimeUnit.class))))
+                )
+                // Virtual threads & Thread builders
+                .type(hasSuperType(named("java.lang.Thread$Builder")).and(not(isInterface())))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) -> builder
+                        .visit(Advice.to(ThreadAdvice.ThreadBuilderStart.class)
+                                .on(named("start").and(takesArguments(Runnable.class))))
+                        .visit(Advice.to(ThreadAdvice.ThreadBuilderStart.class)
+                                .on(named("unstarted").and(takesArguments(Runnable.class))))
+                )
+                .type(named("java.lang.Thread"))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) -> builder
+                        .visit(Advice.to(ThreadAdvice.StartVirtualThread.class)
+                                .on(named("startVirtualThread").and(takesArguments(Runnable.class))))
+                )
+                .type(named("java.lang.ThreadBuilders"))
+                .transform((builder, typeDescription, classLoader, module, protectionDomain) -> builder
+                        .visit(Advice.to(ThreadAdvice.NewVirtualThread.class)
+                                .on(named("newVirtualThread").and(takesArguments(Executor.class, String.class, int.class, Runnable.class))))
                 );
 
         TRANSFORMER = agentBuilder.installOn(inst);

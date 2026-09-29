@@ -89,7 +89,8 @@ public final class BootstrapInjector {
                     AriadneMXBean.class,
                     AriadneManagement.class,
                     CompletableFutureAdvice.class,
-                    ExecutorAdvice.class
+                    ExecutorAdvice.class,
+                    ThreadAdvice.class
             };
 
             try (JarOutputStream jos = new JarOutputStream(new FileOutputStream(tempJar), manifest)) {

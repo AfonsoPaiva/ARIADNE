@@ -31,6 +31,17 @@
             <artifactId>ariadne-adapter-rxjava</artifactId>
             <optional>true</optional>
         </dependency>
+        <dependency>
+            <groupId>io.ariadne</groupId>
+            <artifactId>ariadne-adapter-mdc</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
 
         <dependency>
             <groupId>net.bytebuddy</groupId>
@@ -90,6 +101,7 @@
                                     <exclude>io.projectreactor:*</exclude>
                                     <exclude>io.reactivex.rxjava3:*</exclude>
                                     <exclude>org.reactivestreams:*</exclude>
+                                    <exclude>org.slf4j:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <relocations>

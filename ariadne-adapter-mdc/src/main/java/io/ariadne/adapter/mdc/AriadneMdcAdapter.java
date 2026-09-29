@@ -61,12 +61,17 @@ public final class AriadneMdcAdapter {
                         (proxy1, method, args) -> {
                             String name = method.getName();
                             if ("spawn".equals(name)) {
-                                if (args != null && args.length == 1) {
+                                if (args != null && args.length >= 1) {
                                     int siteId = (int) args[0];
-                                    Map<String, String> mdc = AriadneConfig.isMdcPropagationEnabled()
-                                            ? MDC.getCopyOfContextMap() : null;
+                                    Object payload = (args.length > 1) ? args[1] : null;
+                                    if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {
+                                        Map<String, String> mdc = MDC.getCopyOfContextMap();
+                                        if (mdc != null && !mdc.isEmpty()) {
+                                            payload = mdc;
+                                        }
+                                    }
                                     Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
-                                    return spawnWithAttach.invoke(bootCarrier, siteId, (mdc != null && !mdc.isEmpty()) ? mdc : null);
+                                    return spawnWithAttach.invoke(bootCarrier, siteId, payload);
                                 } else {
                                     return method.invoke(bootCarrier, args);
                                 }

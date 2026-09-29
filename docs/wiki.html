@@ -702,11 +702,11 @@
           </p>
           <ul>
             <li><code>java.util.concurrent.Executor.execute(Runnable)</code></li>
-            <li><code>java.util.concurrent.ExecutorService.submit(Callable)</code></li>
-            <li><code>java.util.concurrent.ExecutorService.submit(Runnable)</code></li>
-            <li><code>java.util.concurrent.ForkJoinPool.execute(ForkJoinTask)</code></li>
-            <li><code>java.util.concurrent.CompletableFuture</code> asynchronous supplier and action stages.</li>
-            <li>Java 21 <code>Thread.ofVirtual().start(Runnable)</code>.</li>
+            <li><code>java.util.concurrent.ExecutorService.submit(Callable)</code> and <code>submit(Runnable)</code></li>
+            <li><code>java.util.concurrent.ScheduledExecutorService.schedule(...)</code>, <code>scheduleAtFixedRate</code>, and <code>scheduleWithFixedDelay</code></li>
+            <li><code>java.util.concurrent.ForkJoinPool</code> (via <code>ExecutorService.execute(Runnable)</code> / <code>submit()</code>)</li>
+            <li><code>java.util.concurrent.CompletableFuture</code> asynchronous supplier, action stages, and <code>delayedExecutor</code>.</li>
+            <li>Java 21 <code>Thread.ofVirtual().start(Runnable)</code> and <code>Thread.startVirtualThread(Runnable)</code>.</li>
           </ul>
           <p>
             The agent automatically checks for the presence of Project Reactor, RxJava, and SLF4J on the application classpath and installs the corresponding adapters without requiring configuration.

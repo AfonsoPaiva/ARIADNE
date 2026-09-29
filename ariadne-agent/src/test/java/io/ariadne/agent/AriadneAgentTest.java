@@ -1,12 +1,18 @@
 package io.ariadne.agent;
 
 import java.lang.instrument.Instrumentation;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -206,27 +212,144 @@ class AriadneAgentTest {
         setContext(2002);
 
         java.util.concurrent.atomic.AtomicReference<Throwable> uncaught = new java.util.concurrent.atomic.AtomicReference<>();
-        Class<?> runnableClass = Class.forName("io.ariadne.core.AriadneRunnable", true, null);
-        Object currentLink = BOOTSTRAP_CONTEXT.getMethod("current").invoke(null);
 
         Runnable rawTask = () -> {
             throw new IllegalStateException("Crash in Thread.ofVirtual");
         };
 
-        // Wrap using AriadneRunnable loaded in bootstrap
-        Runnable wrappedTask = (Runnable) runnableClass.getMethod("wrap", Runnable.class, BOOTSTRAP_LINK)
-                .invoke(null, rawTask, currentLink);
-
+        // Note: rawTask is passed directly WITHOUT manual AriadneRunnable.wrap!
+        // The ByteBuddy agent's ThreadAdvice intercepts Thread.ofVirtual().start() automatically.
         Thread vThread = Thread.ofVirtual()
                 .name("direct-virtual-test")
                 .uncaughtExceptionHandler((t, e) -> uncaught.set(e))
-                .start(wrappedTask);
+                .start(rawTask);
         vThread.join(5000);
 
         assertThat(uncaught.get())
                 .isInstanceOf(IllegalStateException.class)
                 .satisfies(ex -> {
                     Throwable[] suppressed = ex.getSuppressed();
+                    assertThat(suppressed)
+                            .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
+                                    && t.getMessage().contains("hop"));
+                });
+    }
+
+    @Test
+    void shouldPropagateCausalityAcrossThreadStartVirtualThread() throws Exception {
+        setContext(2003);
+
+        java.util.concurrent.atomic.AtomicReference<Throwable> uncaught = new java.util.concurrent.atomic.AtomicReference<>();
+
+        Runnable rawTask = () -> {
+            throw new IllegalStateException("Crash in Thread.startVirtualThread");
+        };
+
+        Thread.UncaughtExceptionHandler oldHandler = Thread.getDefaultUncaughtExceptionHandler();
+        try {
+            Thread.setDefaultUncaughtExceptionHandler((t, e) -> uncaught.set(e));
+            Thread vThread = Thread.startVirtualThread(rawTask);
+            vThread.join(5000);
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(oldHandler);
+        }
+
+        assertThat(uncaught.get())
+                .isInstanceOf(IllegalStateException.class)
+                .satisfies(ex -> {
+                    Throwable[] suppressed = ex.getSuppressed();
+                    assertThat(suppressed)
+                            .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
+                                    && t.getMessage().contains("hop"));
+                });
+    }
+
+    @Test
+    void shouldHandleNestedSubmitsAndCallerRunsPolicyWithoutDoubleWrapping() throws Exception {
+        Class<?> metricsClass = Class.forName("io.ariadne.core.AriadneMetrics", true, null);
+        metricsClass.getMethod("reset").invoke(null);
+
+        // Pool with 1 thread, 1-element queue, and CallerRunsPolicy
+        ThreadPoolExecutor pool = new ThreadPoolExecutor(
+                1, 1, 0L, TimeUnit.MILLISECONDS,
+                new ArrayBlockingQueue<>(1),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+
+        try {
+            CountDownLatch task1Started = new CountDownLatch(1);
+            CountDownLatch task1Release = new CountDownLatch(1);
+
+            // Task 1 occupies the single worker thread
+            pool.submit(() -> {
+                task1Started.countDown();
+                task1Release.await();
+                return "task1";
+            });
+            task1Started.await();
+
+            // Task 2 occupies the queue capacity
+            pool.submit(() -> "task2-in-queue");
+
+            // Task 3 triggers CallerRunsPolicy and executes synchronously on the calling thread.
+            // Inside Task 3, another submit() is issued to test nested SUBMIT_DEPTH tracking!
+            Future<String> task3Future = pool.submit(() -> {
+                Future<String> nested = pool.submit(() -> "nested-result");
+                return "task3-" + nested.get();
+            });
+
+            task1Release.countDown();
+            assertThat(task3Future.get()).isEqualTo("task3-nested-result");
+
+            long hops = (long) metricsClass.getMethod("getHopsSpawned").invoke(null);
+            // Exactly 4 submit calls were issued (task1, task2, task3, nested)
+            // If SUBMIT_DEPTH was broken or double-wrapped via execute(), hops would exceed 4
+            assertThat(hops).as("Each submit must spawn exactly 1 causal hop even with nested CallerRunsPolicy").isEqualTo(4);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void shouldPropagateCausalityInScheduledExecutorService() throws Exception {
+        setContext(2004);
+
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        try {
+            Future<String> future = scheduler.schedule(() -> {
+                throw new IllegalStateException("Crash in scheduled task");
+            }, 10, TimeUnit.MILLISECONDS);
+
+            assertThatThrownBy(future::get)
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .satisfies(ex -> {
+                        Throwable cause = ex.getCause();
+                        Throwable[] suppressed = cause.getSuppressed();
+                        assertThat(suppressed)
+                                .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
+                                        && t.getMessage().contains("hop"));
+                    });
+        } finally {
+            scheduler.shutdownNow();
+        }
+    }
+
+    @Test
+    void shouldPropagateCausalityInCompletableFutureDelayedExecutor() throws Exception {
+        setContext(2005);
+
+        Executor delayed = CompletableFuture.delayedExecutor(10, TimeUnit.MILLISECONDS);
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+            throw new IllegalStateException("Crash in delayedExecutor");
+        }, delayed);
+
+        assertThatThrownBy(future::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .satisfies(ex -> {
+                    Throwable cause = ex.getCause();
+                    Throwable[] suppressed = cause.getSuppressed();
                     assertThat(suppressed)
                             .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
                                     && t.getMessage().contains("hop"));
