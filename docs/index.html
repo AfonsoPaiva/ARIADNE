@@ -1035,7 +1035,7 @@
           <div class="arch-node highlight-red">
             <div class="node-tag">32-Byte Link</div>
             <div class="node-title">Link #1 (Parent: null)</div>
-            <div class="node-meta">3.95 ns • 0 B GC</div>
+            <div class="node-meta">&lt; 4 ns • TLAB</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node">
@@ -1047,7 +1047,7 @@
           <div class="arch-node highlight-red">
             <div class="node-tag">Context Propagation</div>
             <div class="node-title">Link #2 (Parent: #1)</div>
-            <div class="node-meta">MDC + W3C Context</div>
+            <div class="node-meta">MDC Context</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node">
@@ -1076,24 +1076,24 @@
       <!-- 4 Core Metric Highlights -->
       <div class="stats-row">
         <div class="stat-node">
-          <div class="stat-number">1.59 ns</div>
+          <div class="stat-number">~2 ns</div>
           <div class="stat-name">Context Read Latency</div>
           <div class="stat-explain">Reads active thread link at CPU L1 cache speed.</div>
         </div>
         <div class="stat-node">
-          <div class="stat-number">3.95 ns</div>
+          <div class="stat-number">&lt; 4 ns</div>
           <div class="stat-name">Link Allocation Cost</div>
-          <div class="stat-explain">32-byte immutable record, low-churn TLAB allocation without lock contention.</div>
+          <div class="stat-explain">32–40 byte immutable record, low-churn TLAB allocation without lock contention.</div>
         </div>
         <div class="stat-node">
-          <div class="stat-number">~148 ns</div>
+          <div class="stat-number">&lt; 150 ns</div>
           <div class="stat-name">Per-Hop Overhead</div>
           <div class="stat-explain">Measured across multi-threaded executor boundaries under load.</div>
         </div>
         <div class="stat-node">
-          <div class="stat-number">0 bytes</div>
-          <div class="stat-name">Happy Path GC Retention</div>
-          <div class="stat-explain">No strings or StackTraceElements created during successful operations.</div>
+          <div class="stat-number">Low Churn</div>
+          <div class="stat-name">Happy Path Allocation</div>
+          <div class="stat-explain">Lightweight nodes collected in young gen; zero stack frames created on success.</div>
         </div>
       </div>
     </div>
@@ -1134,7 +1134,7 @@
           </div>
 
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px;">
-            Combined overhead across all three asynchronous boundaries is <strong>445 nanoseconds</strong> (~148 ns per hop).
+            Combined overhead across all three asynchronous boundaries is <strong>&lt; 500 nanoseconds</strong> (~150 ns per hop).
           </p>
         </div>
 
@@ -1280,7 +1280,7 @@
   <span class="frame-ariadne">Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous causality trace</span>
     <span class="frame-ariadne">at [Async Hop 2] com.app.billing.BillingService.chargeCustomer(BillingService.java:114)</span>
     <span class="frame-ariadne">at [Async Hop 1] com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)</span>
-    <span class="frame-context">[Context: W3CTrace[traceId=4bf92f3577b34da6, userId=usr_42, mdc={tenantId=corp_acme}]]</span>
+    <span class="frame-context">[Context: MDC={orderId=order_123, tenant=acme}]</span>
 
 <span class="trace-comment"># [THE SOLUTION]</span>
 <span class="trace-comment"># Complete asynchronous causal hierarchy reconstructed via backward pointer traversal.</span>

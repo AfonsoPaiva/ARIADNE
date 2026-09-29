@@ -6,11 +6,11 @@ on:
       warmup_iterations:
         description: 'Warmup Iterations (per benchmark)'
         required: false
-        default: '2'
+        default: '3'
       measurement_iterations:
         description: 'Measurement Iterations'
         required: false
-        default: '3'
+        default: '5'
       forks:
         description: 'JVM Forks'
         required: false

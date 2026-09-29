@@ -526,15 +526,15 @@
           <li class="toc-item"><a href="#intro" class="toc-link">1. Introduction & Motivation</a></li>
           <li class="toc-item"><a href="#the-problem" class="toc-link">2. The Async Blind Spot Problem</a></li>
           <li class="toc-item"><a href="#architecture" class="toc-link">3. Core Mechanical Architecture</a></li>
-          <li class="toc-item"><a href="#link-primitive" class="toc-link">4. The 24-Byte Link Node</a></li>
+          <li class="toc-item"><a href="#link-primitive" class="toc-link">4. The Lightweight Link Node (32–40B)</a></li>
           <li class="toc-item"><a href="#lazy-synthesis" class="toc-link">5. Lazy Backward Synthesis</a></li>
           <li class="toc-item"><a href="#ecosystem" class="toc-link">6. Modular Ecosystem Overview</a></li>
           <li class="toc-item"><a href="#agent" class="toc-link">7. Zero-Code Java Agent</a></li>
           <li class="toc-item"><a href="#reactive" class="toc-link">8. Reactive Framework Adapters</a></li>
           <li class="toc-item"><a href="#mdc-logging" class="toc-link">9. SLF4J MDC Log Propagation</a></li>
-          <li class="toc-item"><a href="#distributed-tracing" class="toc-link">10. W3C Tracing & OpenTelemetry</a></li>
-          <li class="toc-item"><a href="#scoped-values" class="toc-link">11. Java 21 Scoped Values & Loom</a></li>
-          <li class="toc-item"><a href="#coroutines" class="toc-link">12. Kotlin Coroutines Bridge</a></li>
+          <li class="toc-item"><a href="#distributed-tracing" class="toc-link">10. <span style="font-size: 0.75rem; color: var(--accent);">[Roadmap]</span> W3C &amp; OpenTelemetry</a></li>
+          <li class="toc-item"><a href="#scoped-values" class="toc-link">11. <span style="font-size: 0.75rem; color: var(--accent);">[Roadmap]</span> Scoped Values &amp; Loom</a></li>
+          <li class="toc-item"><a href="#coroutines" class="toc-link">12. <span style="font-size: 0.75rem; color: var(--accent);">[Roadmap]</span> Kotlin Coroutines Bridge</a></li>
           <li class="toc-item"><a href="#jmx-config" class="toc-link">13. Dynamic Configuration & JMX</a></li>
           <li class="toc-item"><a href="#benchmarks-detail" class="toc-link">14. Microbenchmarks & Performance</a></li>
           <li class="toc-item"><a href="#getting-started" class="toc-link">15. Getting Started & Installation</a></li>
@@ -597,7 +597,8 @@
             Ariadne resolves this dilemma by decoupling <strong>causal tracking</strong> from <strong>stack trace synthesis</strong>:
           </p>
           <ol>
-            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 24-byte pointer node (<code>Link</code>). No stack frames, strings, or Throwables are captured. Allocation takes <strong>3.95 ns</strong> and is eligible for JIT scalar replacement.</li>
+            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 32–40 byte pointer node (<code>Link</code>) in thread-local TLAB memory. Instead of capturing heavy stack traces, it executes a shallow caller check and indexes an interned registry (<code>SiteRegistry</code>). Allocation takes only <strong>~3.9 ns</strong>, amortizing async hop overhead to <strong>~148 ns</strong>.</li>
+            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 32–40 byte pointer node (<code>Link</code>) in thread-local TLAB memory. Instead of capturing heavy stack traces, it executes a shallow caller check and indexes an interned registry (<code>SiteRegistry</code>). Allocation takes only <strong>&lt; 4 ns</strong>, amortizing async hop overhead to <strong>~150 ns</strong>.</li>
             <li><strong>Execution Time:</strong> The worker thread attaches the <code>Link</code> to its active context for the duration of the task, ensuring nested asynchronous spawns inherit their parent.</li>
             <li><strong>Failure Time (Exception Path):</strong> If an exception occurs, Ariadne walks the lightweight linked list backwards, queries the interned call-site registry, synthesizes an <code>AsyncCausalityException</code>, and attaches it via <code>Throwable.addSuppressed()</code>.</li>
           </ol>
@@ -605,18 +606,23 @@
 
         <!-- 4. Link Primitive -->
         <section class="wiki-section" id="link-primitive">
-          <h2>4. The 24-Byte Link Node</h2>
+          <h2>4. The Lightweight Link Primitive (32–40 Bytes)</h2>
           <p>
-            The foundational unit of Ariadne is the immutable <code>io.ariadne.core.Link</code> class. Its memory footprint is strictly minimized:
+            The foundational unit of Ariadne is the immutable <code>io.ariadne.core.Link</code> class. Its memory footprint is strictly calculated according to 64-bit JVM object layout specifications:
           </p>
           <pre><code><span class="keyword">public final class</span> <span class="type">Link</span> {
-    <span class="keyword">public final</span> <span class="type">Link</span> parent;          <span class="comment">// 8-byte reference (or 4 bytes with CompressedOops)</span>
-    <span class="keyword">public final int</span> siteId;           <span class="comment">// 4-byte integer pointing to SiteRegistry</span>
+    <span class="keyword">public final</span> <span class="type">Link</span> parent;          <span class="comment">// 4 bytes (Compressed OOPs) or 8 bytes</span>
+    <span class="keyword">public final int</span> siteId;           <span class="comment">// 4-byte integer index into SiteRegistry</span>
     <span class="keyword">public final long</span> threadId;        <span class="comment">// 8-byte primitive caller thread identifier</span>
-    <span class="keyword">public final</span> <span class="type">Object</span> attachment;    <span class="comment">// 8-byte optional context payload (MDC / W3C Trace)</span>
+    <span class="keyword">public final</span> <span class="type">Object</span> attachment;    <span class="comment">// 4 bytes (Compressed OOPs) optional context payload (MDC)</span>
+    <span class="keyword">public final int</span> depth;            <span class="comment">// 4-byte integer for O(1) depth tracking and capping</span>
 }</code></pre>
           <p>
-            Because <code>siteId</code> is a 32-bit integer indexing a global interned array (<code>SiteRegistry</code>), Ariadne never allocates string objects or stack frame arrays during normal scheduling.
+            Under a 64-bit HotSpot JVM with Compressed OOPs enabled (<code>-XX:+UseCompressedOops</code>, default for heaps &lt; 32GB):
+            the object header occupies 12 bytes, references 4 bytes each, primitive int 4 bytes, primitive long 8 bytes. With 4 bytes of 8-byte alignment padding, the total instance footprint is <strong>40 bytes</strong> (or 32 bytes without depth). Without Compressed OOPs, it occupies <strong>48 bytes</strong>.
+          </p>
+          <p>
+            Because these nodes escape the method to cross threads, they are allocated in the thread's local TLAB (<em>Thread-Local Allocation Buffer</em>). Ariadne enforces depth capping at <code>maxDepth</code> (default: 32) at spawn time, ensuring repeating tasks (e.g. <code>ScheduledExecutorService</code>) never accumulate unbounded retained heap memory.
           </p>
         </section>
 
@@ -631,6 +637,7 @@
             <li>Resolves each <code>siteId</code> to its class name, method name, file name, and line number from the <code>SiteRegistry</code>.</li>
             <li>Constructs an <code>AsyncCausalityException</code> containing synthetic <code>StackTraceElement</code> frames labeled with <code>[Async Hop N]</code>.</li>
             <li>Appends context payloads (such as W3C <code>traceId</code> or MDC diagnostic maps) to the exception message.</li>
+            <li>Appends context payloads (such as MDC diagnostic maps) to the exception message.</li>
             <li>Attaches the synthesized cause to the original throwable using <code>Throwable.addSuppressed()</code>, preserving the original exception class and stack.</li>
           </ul>
         </section>
@@ -652,6 +659,7 @@
                   <td><strong>Core</strong></td>
                   <td><code>ariadne-core</code></td>
                   <td>Micro-allocation engine, <code>Link</code>, <code>ContextCarrier</code>, <code>W3CTraceContext</code>, and reconstructor. Zero external dependencies.</td>
+                  <td>Micro-allocation engine, <code>Link</code>, <code>ContextCarrier</code>, and reconstructor. Zero external dependencies.</td>
                 </tr>
                 <tr>
                   <td><strong>Agent</strong></td>
@@ -717,7 +725,7 @@
           </p>
           <h3>RxJava 3 (<code>ariadne-adapter-rxjava</code>)</h3>
           <p>
-            Utilizes <code>RxJavaPlugins.setOnScheduleHandler()</code> to wrap <code>Runnable</code> instances before they are dispatched
+            Utilizes <code>RxJavaPlugins.setScheduleHandler()</code> to wrap <code>Runnable</code> instances before they are dispatched
             to <code>Schedulers.io()</code> or <code>Schedulers.computation()</code>.
           </p>
         </section>
@@ -742,9 +750,12 @@
 
         <!-- 10. Distributed Tracing -->
         <section class="wiki-section" id="distributed-tracing">
-          <h2>10. W3C Tracing & OpenTelemetry</h2>
+          <h2>10. W3C Tracing &amp; OpenTelemetry <span style="font-size: 0.85rem; border: 1px solid var(--accent); color: var(--accent); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Planned for v0.2.0</span></h2>
+          <p style="background: rgba(145, 16, 16, 0.1); border-left: 3px solid var(--accent); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
+            <strong>Roadmap Specification:</strong> This module is currently under design for milestone v0.2.0. The specification below outlines the targeted architectural integration.
+          </p>
           <p>
-            Ariadne natively implements the W3C Trace Context specification via <code>W3CTraceContext</code>:
+            Ariadne plans native integration with the W3C Trace Context specification via <code>W3CTraceContext</code>:
           </p>
           <ul>
             <li>Parses and formats <code>traceparent: 00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01</code>.</li>
@@ -752,20 +763,23 @@
             <li>Injects and extracts headers into/from HTTP request headers.</li>
           </ul>
           <p>
-            Additionally, <code>AriadneOtelAdapter</code> provides a reflection bridge to OpenTelemetry's <code>Span.current()</code>,
+            Additionally, <code>AriadneOtelAdapter</code> will provide a reflection bridge to OpenTelemetry's <code>Span.current()</code>,
             synchronizing distributed spans with internal JVM causality without introducing compile-time dependencies.
           </p>
         </section>
 
         <!-- 11. Scoped Values -->
         <section class="wiki-section" id="scoped-values">
-          <h2>11. Java 21 Scoped Values & Loom</h2>
+          <h2>11. Java 21 Scoped Values &amp; Loom <span style="font-size: 0.85rem; border: 1px solid var(--accent); color: var(--accent); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Planned for v0.2.0</span></h2>
+          <p style="background: rgba(145, 16, 16, 0.1); border-left: 3px solid var(--accent); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
+            <strong>Roadmap Specification:</strong> This experimental carrier is designed for Java 21+ Scoped Values (JEP 446 / JEP 464).
+          </p>
           <p>
             In Java 21, millions of lightweight Virtual Threads can be created concurrently. Traditional <code>ThreadLocal</code> variables
             can create unexpected memory retention if not aggressively pruned.
           </p>
           <p>
-            Ariadne provides <code>ScopedValueContextCarrier</code>, utilizing JDK 21 <code>java.lang.ScopedValue</code>:
+            Ariadne's planned <code>ScopedValueContextCarrier</code> will utilize JDK 21 <code>java.lang.ScopedValue</code>:
           </p>
           <ul>
             <li>Values are immutable and bound strictly to lexical execution scopes.</li>
@@ -776,10 +790,13 @@
 
         <!-- 12. Coroutines -->
         <section class="wiki-section" id="coroutines">
-          <h2>12. Kotlin Coroutines Bridge</h2>
+          <h2>12. Kotlin Coroutines Bridge <span style="font-size: 0.85rem; border: 1px solid var(--accent); color: var(--accent); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Planned for v0.2.0</span></h2>
+          <p style="background: rgba(145, 16, 16, 0.1); border-left: 3px solid var(--accent); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
+            <strong>Roadmap Specification:</strong> Planned adapter for seamless Kotlin Coroutine context synchronization.
+          </p>
           <p>
             When using Kotlin Coroutines, tasks suspend and resume across different threads and dispatchers.
-            <code>AriadneCoroutineBridge.asElement()</code> dynamically instantiates a <code>kotlinx.coroutines.ThreadContextElement</code>
+            The upcoming <code>AriadneCoroutineBridge.asElement()</code> will dynamically instantiate a <code>kotlinx.coroutines.ThreadContextElement</code>
             via Java dynamic proxies:
           </p>
           <pre><code><span class="comment">// In Kotlin coroutine code:</span>
@@ -857,26 +874,32 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
                 <tr>
                   <td><strong>Context Lookup</strong></td>
                   <td>1.59 ns</td>
+                  <td>~2 ns</td>
                   <td>Near L1 CPU cache access speed.</td>
                 </tr>
                 <tr>
                   <td><strong>Link Node Allocation</strong></td>
-                  <td>3.95 ns</td>
-                  <td>Immutable 24-byte object, candidate for scalar replacement.</td>
+                  <td>~3.9 ns</td>
+                  <td>&lt; 4 ns</td>
+                  <td>Immutable 32–40 byte object allocated directly in thread TLAB.</td>
                 </tr>
                 <tr>
                   <td><strong>Scoped Attach & Close</strong></td>
                   <td>5.35 ns</td>
+                  <td><strong>Scoped Attach &amp; Close</strong></td>
+                  <td>&lt; 6 ns</td>
                   <td>Full try-with-resources lifecycle.</td>
                 </tr>
                 <tr>
                   <td><strong>Added Async Hop Overhead</strong></td>
                   <td>~148 ns</td>
+                  <td>~150 ns</td>
                   <td>Negligible compared to OS thread scheduler jitter (typically 1-5 µs).</td>
                 </tr>
                 <tr>
                   <td><strong>Reactive 100-Element Stream</strong></td>
                   <td>+0.68 µs</td>
+                  <td>&lt; 1 µs</td>
                   <td>Less than 6% overhead across 100 asynchronous items.</td>
                 </tr>
               </tbody>

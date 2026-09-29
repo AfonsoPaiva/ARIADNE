@@ -127,6 +127,11 @@ public final class AriadneManagement implements AriadneMXBean {
     }
 
     @Override
+    public long getHopsCapped() {
+        return AriadneMetrics.getHopsCapped();
+    }
+
+    @Override
     public long getReconstructionsTotal() {
         return AriadneMetrics.getReconstructionsTotal();
     }
@@ -176,6 +181,7 @@ public final class AriadneManagement implements AriadneMXBean {
         sb.append("Fail Fast: ").append(isFailFast()).append("\n");
         sb.append("MDC Propagation Enabled: ").append(isMdcPropagationEnabled()).append("\n");
         sb.append("Hops Spawned: ").append(getHopsSpawned()).append("\n");
+        sb.append("Hops Capped: ").append(getHopsCapped()).append("\n");
         sb.append("Reconstructions Total: ").append(getReconstructionsTotal()).append("\n");
         sb.append("Reconstructions Capped: ").append(getReconstructionsCapped()).append("\n");
         sb.append("Registered Call Sites: ").append(getRegisteredCallSitesCount()).append("\n");

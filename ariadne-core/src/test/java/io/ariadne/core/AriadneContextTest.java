@@ -96,4 +96,30 @@ class AriadneContextTest {
             executor.shutdownNow();
         }
     }
+
+    @Test
+    void shouldCapChainDepthAtMaxDepthToPreventMemoryRetentionLeaks() {
+        int maxDepth = AriadneConfig.getMaxDepth();
+        AriadneMetrics.reset();
+
+        Link current = new Link(null, 1, Thread.currentThread().threadId());
+        AriadneContext.set(current);
+
+        // Spawn until reaching maxDepth
+        for (int i = 1; i < maxDepth; i++) {
+            current = AriadneContext.spawn(i);
+            AriadneContext.set(current);
+            assertThat(current.depth()).isEqualTo(i + 1);
+            assertThat(current.parent).isNotNull();
+        }
+
+        assertThat(current.depth()).isEqualTo(maxDepth);
+        long initialCapped = AriadneMetrics.getHopsCapped();
+
+        // The next spawn must truncate parent to prevent unbounded chain retention
+        Link cappedChild = AriadneContext.spawn(999);
+        assertThat(cappedChild.parent).isNull();
+        assertThat(cappedChild.depth()).isEqualTo(1);
+        assertThat(AriadneMetrics.getHopsCapped()).isEqualTo(initialCapped + 1);
+    }
 }

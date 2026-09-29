@@ -33,7 +33,7 @@ jobs:
             -rf json \
             -rff benchmark-results.json \
             -prof gc \
-            -wi 2 -w 1s -i 3 -r 1s -f 1
+            -wi 3 -w 1s -i 5 -r 1s -f 1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

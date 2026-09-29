@@ -3,9 +3,17 @@ package io.ariadne.core;
 /**
  * Immutable node in the asynchronous causal chain.
  * <p>
- * Designed to be as lightweight as possible: holds only a reference to the parent link,
- * a pre-resolved integer site identifier, and the thread identifier that spawned the hop.
- * It allocates only a small heap object (~24-32 bytes) with zero stack walk on creation.
+ * Memory Layout on 64-bit JVM with Compressed OOPs (-XX:+UseCompressedOops):
+ * <ul>
+ *   <li>Object header: 12 bytes (8-byte mark word + 4-byte compressed klass pointer)</li>
+ *   <li>Reference {@code parent}: 4 bytes (compressed pointer)</li>
+ *   <li>Primitive {@code siteId}: 4 bytes (int)</li>
+ *   <li>Primitive {@code threadId}: 8 bytes (long)</li>
+ *   <li>Reference {@code attachment}: 4 bytes (compressed pointer)</li>
+ *   <li>Primitive {@code depth}: 4 bytes (int, for O(1) depth queries and leak prevention)</li>
+ *   <li>Padding / alignment: 4 bytes</li>
+ *   <li><b>Total instance footprint: 40 bytes</b> (allocated in thread-local TLAB; 48 bytes without compressed OOPs)</li>
+ * </ul>
  */
 public final class Link {
 
@@ -13,6 +21,7 @@ public final class Link {
     public final int siteId;
     public final long threadId;
     public final Object attachment;
+    public final int depth;
 
     public Link(Link parent, int siteId, long threadId) {
         this(parent, siteId, threadId, null);
@@ -23,19 +32,14 @@ public final class Link {
         this.siteId = siteId;
         this.threadId = threadId;
         this.attachment = attachment;
+        this.depth = (parent == null) ? 1 : (parent.depth + 1);
     }
 
     /**
-     * Calculates the depth of this link in the causal chain.
+     * Returns the depth of this link in the causal chain in O(1) time.
      */
     public int depth() {
-        int d = 1;
-        Link current = parent;
-        while (current != null) {
-            d++;
-            current = current.parent;
-        }
-        return d;
+        return depth;
     }
 
     @Override
@@ -43,6 +47,7 @@ public final class Link {
         return "Link{" +
                 "siteId=" + siteId +
                 ", threadId=" + threadId +
+                ", depth=" + depth +
                 ", hasParent=" + (parent != null) +
                 '}';
     }

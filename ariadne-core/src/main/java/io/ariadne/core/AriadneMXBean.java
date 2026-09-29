@@ -57,6 +57,11 @@ public interface AriadneMXBean {
     long getHopsSpawned();
 
     /**
+     * Returns the number of causal hops where parent retention was capped to prevent memory leaks.
+     */
+    long getHopsCapped();
+
+    /**
      * Returns the total number of exceptions enriched with causal stack traces.
      */
     long getReconstructionsTotal();

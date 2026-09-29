@@ -55,7 +55,7 @@ java.lang.NullPointerException: Cannot invoke "Account.balance()"
 Traditional diagnostic tools capture full JVM stack traces (`new Throwable()`) on **every single task dispatch or operator creation**, devouring CPU cycles and causing severe GC pressure (often 10×–100× throughput degradation).
 
 Ariadne uses **lazy backward pointer traversal**:
-1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 32-byte pointer (`Link`) in thread-local TLAB memory. Instead of capturing full Throwables, it executes a shallow `StackWalker` check (capturing only the immediate caller frame) and interns the call-site in a lock-free registry (`SiteRegistry`), amortizing the hop cost to **~148 ns**.
+1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 32-byte pointer (`Link`) in thread-local TLAB memory. Instead of capturing full Throwables, it executes a shallow `StackWalker` check (capturing only the immediate caller frame) and interns the call-site in a lock-free registry (`SiteRegistry`), amortizing the hop cost to **~150 ns**.
 2. **Memory retention protection:** Chains are capped at a configurable depth (`ariadne.max.depth`, default: 32) at spawn time, preventing memory leaks on recursive or repeating tasks (e.g. `ScheduledExecutorService` or reactive loops).
 3. **On failure only (exceptions):** Ariadne traverses the pointer chain backwards, synthesizes the causal stack frames, and attaches them directly via `Throwable.addSuppressed()`.
 
@@ -69,7 +69,7 @@ Ariadne uses **lazy backward pointer traversal**:
 | **Supported Boundaries** | Executors, Loom, CompletableFuture, Reactor, RxJava, MDC | Project Reactor exclusively | Network, HTTP, JDBC, Executors |
 | **Exception Enrichment** | Direct causal frames in `Throwable.addSuppressed()` | Reconstructed assembly in error message | Error span status in collector |
 | **Infrastructure Overhead** | Zero external dependencies; local in-memory | Zero external dependencies; Reactor only | Requires OTel Collector, Jaeger/Zipkin |
-| **Happy Path Overhead** | ~148 ns per async hop | Low (bytecode instrumentation at class load) | Variable (span creation & propagation) |
+| **Happy Path Overhead** | ~150 ns per async hop | Low (bytecode instrumentation at class load) | Variable (span creation & propagation) |
 
 ---
 
@@ -119,15 +119,15 @@ dependencies {
 
 ## Performance Summary (JMH 1.37 / Java 21)
 
-| Operation | Observed Latency | Impact |
+| Operation | Typical Latency | Impact |
 | :--- | :---: | :--- |
-| **Context Read** | **1.6 ns** | Near CPU L1 cache speed |
-| **Direct Link Creation** | **3.9 ns** | Immutable 32-byte record allocation (TLAB) |
-| **Context Hop (`spawn`)** | **4.5 ns** | Read parent + allocate link + thread update |
-| **Overhead per Async Hop** | **~148 ns** | Imperceptible vs. OS scheduler jitter |
-| **Reactive Stream (100 elements)** | **+0.68 µs** | Less than 6% overhead across 100 items |
+| **Context Read** | **~2 ns** | Near CPU L1 cache speed |
+| **Direct Link Creation** | **&lt; 4 ns** | Immutable 32–40 byte record allocation (TLAB) |
+| **Context Hop (`spawn`)** | **&lt; 5 ns** | Read parent + allocate link + thread update |
+| **Overhead per Async Hop** | **~150 ns** | Imperceptible vs. OS scheduler jitter (1–5 µs) |
+| **Reactive Stream (100 elements)** | **&lt; 1 µs** | Less than 6% overhead across 100 items |
 
-For comprehensive JMH graphs, testing parameters, and methodology, see the [Technical Wiki](docs/wiki.html#benchmarks).
+> 📊 **Reproducible Methodology:** Benchmarks are run via our automated [JMH Benchmark Workflow](.github/workflows/benchmarks.yml) (OpenJDK 21 HotSpot, `-prof gc`). Each release publishes the raw `benchmark-results.json` containing latency percentiles, error margins, and per-op allocation metrics. For technical details, see the [Technical Wiki](docs/wiki.html#benchmarks).
 
 ---
 
