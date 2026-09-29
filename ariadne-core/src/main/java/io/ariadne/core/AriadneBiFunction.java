@@ -40,11 +40,28 @@ public final class AriadneBiFunction<T, U, R> implements BiFunction<T, U, R> {
 
     @Override
     public R apply(T t, U u) {
-        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
+        AriadneContext.Scope scope = null;
+        try {
+            scope = AriadneContext.attach(capturedLink);
+        } catch (Throwable ignored) {
+            // Fail-safe: if attaching fails, continue running target
+        }
+        try {
             return target.apply(t, u);
         } catch (Throwable ex) {
-            AriadneReconstructor.enrich(ex, capturedLink);
+            try {
+                AriadneReconstructor.enrich(ex, capturedLink);
+            } catch (Throwable ignored) {
+                // Fail-safe: never hide or corrupt original exception
+            }
             throw ex;
+        } finally {
+            if (scope != null) {
+                try {
+                    scope.close();
+                } catch (Throwable ignored) {
+                }
+            }
         }
     }
 

@@ -23,4 +23,4 @@ jobs:
           cache: 'maven'
 
       - name: Run Tests
-        run: mvn -B clean test
+        run: mvn -B clean verify

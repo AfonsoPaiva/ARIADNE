@@ -35,9 +35,15 @@ public final class CompletableFutureAdvice {
     public static class SupplyAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Supplier<?> supplier) {
-            if (supplier != null && !(supplier instanceof AriadneSupplier)) {
-                int siteId = SiteRegistry.getOrRegister(supplier.getClass(), "CompletableFuture.supplyAsync");
-                supplier = AriadneSupplier.wrap(supplier, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (supplier != null && !io.ariadne.core.AriadneConfig.isClassExcluded(supplier.getClass().getName()) && !(supplier instanceof AriadneSupplier)) {
+                    int siteId = SiteRegistry.getOrRegister(supplier.getClass(), "CompletableFuture.supplyAsync");
+                    supplier = AriadneSupplier.wrap(supplier, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -45,9 +51,15 @@ public final class CompletableFutureAdvice {
     public static class RunAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "CompletableFuture.runAsync");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "CompletableFuture.runAsync");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -55,9 +67,15 @@ public final class CompletableFutureAdvice {
     public static class ThenApplyAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Function<?, ?> fn) {
-            if (fn != null && !(fn instanceof AriadneFunction)) {
-                int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.thenApplyAsync");
-                fn = AriadneFunction.wrap(fn, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (fn != null && !io.ariadne.core.AriadneConfig.isClassExcluded(fn.getClass().getName()) && !(fn instanceof AriadneFunction)) {
+                    int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.thenApplyAsync");
+                    fn = AriadneFunction.wrap(fn, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -65,9 +83,15 @@ public final class CompletableFutureAdvice {
     public static class ThenAcceptAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Consumer<?> consumer) {
-            if (consumer != null && !(consumer instanceof AriadneConsumer)) {
-                int siteId = SiteRegistry.getOrRegister(consumer.getClass(), "CompletableFuture.thenAcceptAsync");
-                consumer = AriadneConsumer.wrap(consumer, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (consumer != null && !io.ariadne.core.AriadneConfig.isClassExcluded(consumer.getClass().getName()) && !(consumer instanceof AriadneConsumer)) {
+                    int siteId = SiteRegistry.getOrRegister(consumer.getClass(), "CompletableFuture.thenAcceptAsync");
+                    consumer = AriadneConsumer.wrap(consumer, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -75,9 +99,15 @@ public final class CompletableFutureAdvice {
     public static class ThenRunAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "CompletableFuture.thenRunAsync");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "CompletableFuture.thenRunAsync");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -85,9 +115,15 @@ public final class CompletableFutureAdvice {
     public static class ThenComposeAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Function<?, ?> fn) {
-            if (fn != null && !(fn instanceof AriadneFunction)) {
-                int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.thenComposeAsync");
-                fn = AriadneFunction.wrap(fn, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (fn != null && !io.ariadne.core.AriadneConfig.isClassExcluded(fn.getClass().getName()) && !(fn instanceof AriadneFunction)) {
+                    int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.thenComposeAsync");
+                    fn = AriadneFunction.wrap(fn, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -95,9 +131,15 @@ public final class CompletableFutureAdvice {
     public static class HandleAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) BiFunction<?, ?, ?> fn) {
-            if (fn != null && !(fn instanceof AriadneBiFunction)) {
-                int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.handleAsync");
-                fn = AriadneBiFunction.wrap(fn, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (fn != null && !io.ariadne.core.AriadneConfig.isClassExcluded(fn.getClass().getName()) && !(fn instanceof AriadneBiFunction)) {
+                    int siteId = SiteRegistry.getOrRegister(fn.getClass(), "CompletableFuture.handleAsync");
+                    fn = AriadneBiFunction.wrap(fn, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -105,9 +147,15 @@ public final class CompletableFutureAdvice {
     public static class WhenCompleteAsync {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) BiConsumer<?, ?> consumer) {
-            if (consumer != null && !(consumer instanceof AriadneBiConsumer)) {
-                int siteId = SiteRegistry.getOrRegister(consumer.getClass(), "CompletableFuture.whenCompleteAsync");
-                consumer = AriadneBiConsumer.wrap(consumer, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (consumer != null && !io.ariadne.core.AriadneConfig.isClassExcluded(consumer.getClass().getName()) && !(consumer instanceof AriadneBiConsumer)) {
+                    int siteId = SiteRegistry.getOrRegister(consumer.getClass(), "CompletableFuture.whenCompleteAsync");
+                    consumer = AriadneBiConsumer.wrap(consumer, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }

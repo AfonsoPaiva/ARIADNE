@@ -1,8 +1,13 @@
 package io.ariadne.core;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  * Global dynamic configuration for Ariadne.
@@ -25,6 +30,13 @@ public final class AriadneConfig {
     public static final boolean DEFAULT_FAIL_FAST = false;
     public static final boolean DEFAULT_JMX_ENABLED = true;
     public static final boolean DEFAULT_MDC_PROPAGATION_ENABLED = true;
+    public static final boolean DEFAULT_ENABLED = true;
+    public static final boolean DEFAULT_EXCEPTION_CONTEXT_ENABLED = false;
+    public static final Set<String> DEFAULT_MDC_ALLOWLIST = Collections.unmodifiableSet(
+            new java.util.HashSet<>(Arrays.asList("traceId", "spanId", "correlationId", "traceparent", "requestId", "tenant"))
+    );
+    public static final int DEFAULT_MDC_MAX_ENTRIES = 50;
+    public static final int DEFAULT_MDC_MAX_VALUE_LENGTH = 512;
 
     public enum CallSiteMode {
         CLASS,
@@ -37,6 +49,22 @@ public final class AriadneConfig {
 
     private static final AtomicInteger MAX_DEPTH = new AtomicInteger(
             getIntProperty("ariadne.max.depth", "ARIADNE_MAX_DEPTH", DEFAULT_MAX_DEPTH, MIN_MAX_DEPTH, MAX_MAX_DEPTH)
+    );
+
+    private static final AtomicBoolean ENABLED = new AtomicBoolean(
+            getBooleanProperty("ariadne.enabled", "ARIADNE_ENABLED", DEFAULT_ENABLED)
+    );
+
+    private static final AtomicBoolean EXCEPTION_CONTEXT_ENABLED = new AtomicBoolean(
+            getBooleanProperty("ariadne.exception.context.enabled", "ARIADNE_EXCEPTION_CONTEXT_ENABLED", DEFAULT_EXCEPTION_CONTEXT_ENABLED)
+    );
+
+    private static final AtomicReference<List<String>> EXCLUDES = new AtomicReference<>(
+            parseExcludes(getStringProperty("ariadne.excludes", "ARIADNE_EXCLUDES"))
+    );
+
+    private static final AtomicReference<Set<String>> MDC_ALLOWLIST = new AtomicReference<>(
+            parseAllowlist(getStringProperty("ariadne.mdc.allowlist", "ARIADNE_MDC_ALLOWLIST"))
     );
 
     private static final AtomicBoolean CANARY_PROBES_ENABLED = new AtomicBoolean(
@@ -208,10 +236,131 @@ public final class AriadneConfig {
     }
 
     /**
+     * Checks if Ariadne causal tracking is enabled globally.
+     * When disabled via kill switch (-Dariadne.enabled=false or ARIADNE_ENABLED=false),
+     * all agent advice and causal tracking short-circuit with zero interception.
+     */
+    public static boolean isEnabled() {
+        return ENABLED.get();
+    }
+
+    /**
+     * Dynamically enables or disables Ariadne tracking globally (kill switch).
+     */
+    public static void setEnabled(boolean enabled) {
+        ENABLED.set(enabled);
+    }
+
+    /**
+     * Checks if contextual attachments (such as MDC maps) should be rendered
+     * inside AsyncCausalityException messages.
+     * <p>
+     * Disabled by default to prevent sensitive PII, authorization tokens, or user IDs
+     * from leaking into logs or exception traces.
+     */
+    public static boolean isExceptionContextEnabled() {
+        return EXCEPTION_CONTEXT_ENABLED.get();
+    }
+
+    /**
+     * Enables or disables contextual attachments in exception messages.
+     */
+    public static void setExceptionContextEnabled(boolean enabled) {
+        EXCEPTION_CONTEXT_ENABLED.set(enabled);
+    }
+
+    /**
+     * Returns the list of configured class/package exclusion patterns.
+     */
+    public static List<String> getExcludes() {
+        return EXCLUDES.get();
+    }
+
+    /**
+     * Configures the list of class/package exclusion patterns.
+     */
+    public static void setExcludes(List<String> excludes) {
+        EXCLUDES.set(excludes != null ? Collections.unmodifiableList(excludes) : Collections.emptyList());
+    }
+
+    /**
+     * Checks if a class is excluded from instrumentation or wrapping based on configured patterns.
+     */
+    public static boolean isClassExcluded(String className) {
+        if (className == null || className.isBlank()) {
+            return false;
+        }
+        List<String> list = EXCLUDES.get();
+        if (list == null || list.isEmpty()) {
+            return false;
+        }
+        for (String pattern : list) {
+            if (pattern.endsWith("*")) {
+                String prefix = pattern.substring(0, pattern.length() - 1);
+                if (className.startsWith(prefix)) {
+                    return true;
+                }
+            } else if (className.equals(pattern) || className.startsWith(pattern + "$")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets the allowlist of permitted MDC keys that can be included in exception context when enabled.
+     */
+    public static Set<String> getMdcAllowlist() {
+        return MDC_ALLOWLIST.get();
+    }
+
+    /**
+     * Sets the allowlist of permitted MDC keys.
+     */
+    public static void setMdcAllowlist(Set<String> allowlist) {
+        MDC_ALLOWLIST.set(allowlist != null ? Collections.unmodifiableSet(allowlist) : Collections.emptySet());
+    }
+
+    /**
+     * Checks whether an MDC key is on the approved allowlist.
+     */
+    public static boolean isMdcKeyAllowed(String key) {
+        if (key == null) {
+            return false;
+        }
+        Set<String> allowlist = MDC_ALLOWLIST.get();
+        return allowlist != null && allowlist.contains(key);
+    }
+
+    public static List<String> parseExcludes(String val) {
+        if (val == null || val.isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(val.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toUnmodifiableList());
+    }
+
+    public static Set<String> parseAllowlist(String val) {
+        if (val == null || val.isBlank()) {
+            return DEFAULT_MDC_ALLOWLIST;
+        }
+        return Arrays.stream(val.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
      * Resets all configurations to their default values.
      */
     public static void resetDefaults() {
         MAX_DEPTH.set(DEFAULT_MAX_DEPTH);
+        ENABLED.set(DEFAULT_ENABLED);
+        EXCEPTION_CONTEXT_ENABLED.set(DEFAULT_EXCEPTION_CONTEXT_ENABLED);
+        EXCLUDES.set(parseExcludes(getStringProperty("ariadne.excludes", "ARIADNE_EXCLUDES")));
+        MDC_ALLOWLIST.set(parseAllowlist(getStringProperty("ariadne.mdc.allowlist", "ARIADNE_MDC_ALLOWLIST")));
         CANARY_PROBES_ENABLED.set(DEFAULT_CANARY_PROBES_ENABLED);
         FAIL_FAST.set(DEFAULT_FAIL_FAST);
         JMX_ENABLED.set(DEFAULT_JMX_ENABLED);

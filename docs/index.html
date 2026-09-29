@@ -999,6 +999,27 @@
                 Bytecode instrumentation intercepts thread pools, CompletableFuture, Virtual Threads, and reactive streams transparently at startup without code changes.
               </div>
             </li>
+            <li class="pvs-item">
+              <span class="pvs-icon check">✓</span>
+              <div>
+                <span class="pvs-item-title">Total Fail-Safe &amp; Kill Switch:</span>
+                Every advice and reconstructor block is bulletproofed with <code>try-catch(Throwable)</code>. Master kill switch (<code>-Dariadne.enabled=false</code>) and exclusion list (<code>-Dariadne.excludes=...</code>) ensure risk-free operations.
+              </div>
+            </li>
+            <li class="pvs-item">
+              <span class="pvs-icon check">✓</span>
+              <div>
+                <span class="pvs-item-title">Data Leakage Prevention:</span>
+                MDC attachments in exception messages are disabled by default (<code>ariadne.exception.context.enabled=false</code>) with key allowlisting (<code>ariadne.mdc.allowlist</code>) to prevent tokens, passwords, or PII leaking to log aggregators.
+              </div>
+            </li>
+            <li class="pvs-item">
+              <span class="pvs-icon check">✓</span>
+              <div>
+                <span class="pvs-item-title">Origin-Preserving Sliding Window:</span>
+                Memory is strictly bounded to <code>O(maxDepth)</code>. When pruning long-lived chains, Ariadne guarantees that the <strong>root ingress origin</strong> (e.g., HTTP controller) is permanently preserved alongside the immediate failure context.
+              </div>
+            </li>
           </ul>
         </div>
       </div>

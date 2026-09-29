@@ -434,4 +434,63 @@ class AriadneAgentTest {
             configClass.getMethod("resetDefaults").invoke(null);
         }
     }
+
+    @Test
+    void shouldBypassTrackingWhenKillSwitchActivated() throws Exception {
+        Class<?> configClass = Class.forName("io.ariadne.core.AriadneConfig", true, null);
+        configClass.getMethod("setEnabled", boolean.class).invoke(null, false);
+        try {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                throw new IllegalStateException("Crash with kill switch active");
+            });
+
+            assertThatThrownBy(future::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .satisfies(ex -> {
+                        Throwable cause = ex.getCause();
+                        Throwable[] suppressed = cause.getSuppressed();
+                        assertThat(suppressed)
+                                .as("When kill switch is enabled, no AsyncCausalityException should be attached")
+                                .noneMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"));
+                    });
+        } finally {
+            configClass.getMethod("resetDefaults").invoke(null);
+        }
+    }
+
+    static class ExcludedWorkerTask implements Runnable {
+        @Override
+        public void run() {
+            throw new IllegalStateException("Crash in excluded worker task");
+        }
+    }
+
+    @Test
+    void shouldBypassExcludedClasses() throws Exception {
+        Class<?> configClass = Class.forName("io.ariadne.core.AriadneConfig", true, null);
+        java.util.List<String> excludes = java.util.List.of("io.ariadne.agent.AriadneAgentTest$ExcludedWorkerTask");
+        configClass.getMethod("setExcludes", java.util.List.class).invoke(null, excludes);
+        try {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            try {
+                Future<?> future = executor.submit(new ExcludedWorkerTask());
+                assertThatThrownBy(future::get)
+                        .isInstanceOf(ExecutionException.class)
+                        .hasCauseInstanceOf(IllegalStateException.class)
+                        .satisfies(ex -> {
+                            Throwable cause = ex.getCause();
+                            Throwable[] suppressed = cause.getSuppressed();
+                            assertThat(suppressed)
+                                    .as("When task class is excluded, no AsyncCausalityException should be attached")
+                                    .noneMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"));
+                        });
+            } finally {
+                executor.shutdown();
+                executor.awaitTermination(2, TimeUnit.SECONDS);
+            }
+        } finally {
+            configClass.getMethod("resetDefaults").invoke(null);
+        }
+    }
 }

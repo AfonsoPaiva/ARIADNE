@@ -53,6 +53,10 @@ public final class AriadneAgent {
             return;
         }
 
+        if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+            return;
+        }
+
         // 1. Ensure core classes are visible on bootstrap search path
         tryInjectBootstrapPath(inst);
 
@@ -72,6 +76,11 @@ public final class AriadneAgent {
                                 .or(nameStartsWith("jdk.internal."))
                                 .or(nameStartsWith("jdk.proxy"))
                                 .or(nameStartsWith("sun."))
+                                .or(nameStartsWith("org.springframework.cglib."))
+                                .or(nameStartsWith("org.objectweb.asm."))
+                                .or(nameStartsWith("ch.qos.logback."))
+                                .or(nameStartsWith("org.slf4j."))
+                                .or(target -> io.ariadne.core.AriadneConfig.isClassExcluded(target.getActualName()))
                 )
                 // CompletableFuture instrumentation
                 .type(named("java.util.concurrent.CompletableFuture"))

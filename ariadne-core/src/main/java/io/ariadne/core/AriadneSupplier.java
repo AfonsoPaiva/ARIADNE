@@ -40,11 +40,28 @@ public final class AriadneSupplier<T> implements Supplier<T> {
 
     @Override
     public T get() {
-        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
+        AriadneContext.Scope scope = null;
+        try {
+            scope = AriadneContext.attach(capturedLink);
+        } catch (Throwable ignored) {
+            // Fail-safe: if attaching fails, continue running target
+        }
+        try {
             return target.get();
         } catch (Throwable t) {
-            AriadneReconstructor.enrich(t, capturedLink);
+            try {
+                AriadneReconstructor.enrich(t, capturedLink);
+            } catch (Throwable ignored) {
+                // Fail-safe: never hide or corrupt original exception
+            }
             throw t;
+        } finally {
+            if (scope != null) {
+                try {
+                    scope.close();
+                } catch (Throwable ignored) {
+                }
+            }
         }
     }
 

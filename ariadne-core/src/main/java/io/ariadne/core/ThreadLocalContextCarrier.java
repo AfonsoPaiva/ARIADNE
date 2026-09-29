@@ -46,19 +46,59 @@ public final class ThreadLocalContextCarrier implements ContextCarrier {
         return new Link(parent, siteId, Thread.currentThread().threadId(), attachment);
     }
 
-    private static Link pruneOldestHops(Link current, int retainCount) {
+    /**
+     * Prunes intermediate hops when the causal chain exceeds {@link AriadneConfig#getMaxDepth()}.
+     * <p>
+     * <b>Preserving the Origin (Root Preservation Guarantee):</b><br>
+     * Standard FIFO sliding windows drop the oldest elements first. In asynchronous web applications,
+     * the oldest hop is the HTTP Controller / ingress request entrypoint — the most critical anchor
+     * for understanding the originating user request.
+     * <p>
+     * Ariadne guarantees that the <b>root origin hop</b> (where {@code parent == null}) is permanently
+     * retained at the base of the chain, while sliding the intermediate window to retain the most recent
+     * {@code (retainCount - 1)} hops leading to {@code current}.
+     * <p>
+     * <b>Tradeoff:</b> Intermediate hops between the root origin and the sliding window are pruned,
+     * freeing memory and bounding chain depth to {@code O(maxDepth)} to prevent memory retention leaks
+     * in unbounded reactive streams or recursive tasks, while strictly preserving both root cause origin
+     * and immediate failure context.
+     *
+     * @param current     The active tail link
+     * @param retainCount Total number of links to retain (including the root)
+     * @return A newly linked chain with root at the base and recent hops attached
+     */
+    static Link pruneOldestHops(Link current, int retainCount) {
         if (current == null || retainCount <= 0) {
             return null;
         }
-        Link[] chain = new Link[retainCount];
+
+        // 1. Locate the root origin hop
+        Link root = current;
+        while (root.parent != null) {
+            root = root.parent;
+        }
+
+        // If only 1 hop to retain, return the root link
+        if (retainCount == 1 || current == root) {
+            return new Link(null, root.siteId, root.threadId, root.attachment);
+        }
+
+        // 2. Collect the (retainCount - 1) most recent hops leading up to current (excluding root)
+        int recentCount = retainCount - 1;
+        Link[] recent = new Link[recentCount];
         Link node = current;
-        for (int i = retainCount - 1; i >= 0 && node != null; i--) {
-            chain[i] = node;
+        int collected = 0;
+        for (int i = recentCount - 1; i >= 0 && node != null && node != root; i--) {
+            recent[i] = node;
+            collected++;
             node = node.parent;
         }
-        Link rebuilt = null;
-        for (int i = 0; i < retainCount; i++) {
-            Link orig = chain[i];
+
+        // 3. Rebuild chain starting with the root origin hop
+        Link rebuilt = new Link(null, root.siteId, root.threadId, root.attachment);
+        int startIndex = recentCount - collected;
+        for (int i = startIndex; i < recentCount; i++) {
+            Link orig = recent[i];
             if (orig != null) {
                 rebuilt = new Link(rebuilt, orig.siteId, orig.threadId, orig.attachment);
             }

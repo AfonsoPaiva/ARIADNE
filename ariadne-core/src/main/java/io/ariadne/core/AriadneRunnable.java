@@ -48,11 +48,28 @@ public final class AriadneRunnable implements Runnable {
 
     @Override
     public void run() {
-        try (AriadneContext.Scope ignored = AriadneContext.attach(capturedLink)) {
+        AriadneContext.Scope scope = null;
+        try {
+            scope = AriadneContext.attach(capturedLink);
+        } catch (Throwable ignored) {
+            // Fail-safe: if attaching fails, continue running target
+        }
+        try {
             target.run();
         } catch (Throwable t) {
-            AriadneReconstructor.enrich(t, capturedLink);
+            try {
+                AriadneReconstructor.enrich(t, capturedLink);
+            } catch (Throwable ignored) {
+                // Fail-safe: never hide or corrupt original exception
+            }
             throw t;
+        } finally {
+            if (scope != null) {
+                try {
+                    scope.close();
+                } catch (Throwable ignored) {
+                }
+            }
         }
     }
 

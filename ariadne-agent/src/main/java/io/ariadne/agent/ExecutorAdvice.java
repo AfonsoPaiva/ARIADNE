@@ -32,13 +32,19 @@ public final class ExecutorAdvice {
     public static class Execute {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                // Skip if we're inside a submit() call — submit already wrapped
-                if (SUBMIT_DEPTH.get() > 0) {
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
                     return;
                 }
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "Executor.execute");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    // Skip if we're inside a submit() call — submit already wrapped
+                    if (SUBMIT_DEPTH.get() > 0) {
+                        return;
+                    }
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "Executor.execute");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -46,20 +52,32 @@ public final class ExecutorAdvice {
     public static class SubmitCallable {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Callable<?> callable) {
-            SUBMIT_DEPTH.set(SUBMIT_DEPTH.get() + 1);
-            if (callable != null && !(callable instanceof AriadneCallable)) {
-                int siteId = SiteRegistry.getOrRegister(callable.getClass(), "ExecutorService.submit(Callable)");
-                callable = AriadneCallable.wrap(callable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                SUBMIT_DEPTH.set(SUBMIT_DEPTH.get() + 1);
+                if (callable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(callable.getClass().getName()) && !(callable instanceof AriadneCallable)) {
+                    int siteId = SiteRegistry.getOrRegister(callable.getClass(), "ExecutorService.submit(Callable)");
+                    callable = AriadneCallable.wrap(callable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
 
         @Advice.OnMethodExit(onThrowable = Throwable.class)
         public static void onExit() {
-            int depth = SUBMIT_DEPTH.get() - 1;
-            if (depth <= 0) {
-                SUBMIT_DEPTH.remove();
-            } else {
-                SUBMIT_DEPTH.set(depth);
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                int depth = SUBMIT_DEPTH.get() - 1;
+                if (depth <= 0) {
+                    SUBMIT_DEPTH.remove();
+                } else {
+                    SUBMIT_DEPTH.set(depth);
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -67,20 +85,32 @@ public final class ExecutorAdvice {
     public static class SubmitRunnable {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            SUBMIT_DEPTH.set(SUBMIT_DEPTH.get() + 1);
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ExecutorService.submit(Runnable)");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                SUBMIT_DEPTH.set(SUBMIT_DEPTH.get() + 1);
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ExecutorService.submit(Runnable)");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
 
         @Advice.OnMethodExit(onThrowable = Throwable.class)
         public static void onExit() {
-            int depth = SUBMIT_DEPTH.get() - 1;
-            if (depth <= 0) {
-                SUBMIT_DEPTH.remove();
-            } else {
-                SUBMIT_DEPTH.set(depth);
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                int depth = SUBMIT_DEPTH.get() - 1;
+                if (depth <= 0) {
+                    SUBMIT_DEPTH.remove();
+                } else {
+                    SUBMIT_DEPTH.set(depth);
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -88,9 +118,15 @@ public final class ExecutorAdvice {
     public static class ScheduleRunnable {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.schedule(Runnable)");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.schedule(Runnable)");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -98,9 +134,15 @@ public final class ExecutorAdvice {
     public static class ScheduleCallable {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Callable<?> callable) {
-            if (callable != null && !(callable instanceof AriadneCallable)) {
-                int siteId = SiteRegistry.getOrRegister(callable.getClass(), "ScheduledExecutorService.schedule(Callable)");
-                callable = AriadneCallable.wrap(callable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (callable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(callable.getClass().getName()) && !(callable instanceof AriadneCallable)) {
+                    int siteId = SiteRegistry.getOrRegister(callable.getClass(), "ScheduledExecutorService.schedule(Callable)");
+                    callable = AriadneCallable.wrap(callable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -108,9 +150,15 @@ public final class ExecutorAdvice {
     public static class ScheduleAtFixedRate {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.scheduleAtFixedRate");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.scheduleAtFixedRate");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
@@ -118,9 +166,15 @@ public final class ExecutorAdvice {
     public static class ScheduleWithFixedDelay {
         @Advice.OnMethodEnter
         public static void onEnter(@Advice.Argument(value = 0, readOnly = false) Runnable runnable) {
-            if (runnable != null && !(runnable instanceof AriadneRunnable)) {
-                int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.scheduleWithFixedDelay");
-                runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+            try {
+                if (!io.ariadne.core.AriadneConfig.isEnabled()) {
+                    return;
+                }
+                if (runnable != null && !io.ariadne.core.AriadneConfig.isClassExcluded(runnable.getClass().getName()) && !(runnable instanceof AriadneRunnable)) {
+                    int siteId = SiteRegistry.getOrRegister(runnable.getClass(), "ScheduledExecutorService.scheduleWithFixedDelay");
+                    runnable = AriadneRunnable.wrap(runnable, AriadneContext.spawn(siteId));
+                }
+            } catch (Throwable ignored) {
             }
         }
     }
