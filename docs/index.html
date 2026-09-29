@@ -1029,19 +1029,19 @@
           <div class="arch-node">
             <div class="node-tag">Step 1: Origin</div>
             <div class="node-title">Caller Thread</div>
-            <div class="node-meta">CheckoutController:58</div>
+            <div class="node-meta">OrderService:27</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node highlight-red">
-            <div class="node-tag">32-Byte Link</div>
+            <div class="node-tag">40-Byte Link</div>
             <div class="node-title">Link #1 (Parent: null)</div>
             <div class="node-meta">&lt; 4 ns • TLAB</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node">
             <div class="node-tag">Step 2: Dispatch</div>
-            <div class="node-title">ThreadPoolExecutor</div>
-            <div class="node-meta">BillingService:114</div>
+            <div class="node-title">ThreadPool / CompletableFuture</div>
+            <div class="node-meta">PaymentService:16</div>
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node highlight-red">
@@ -1053,7 +1053,7 @@
           <div class="arch-node">
             <div class="node-tag">Step 3: Crash Site</div>
             <div class="node-title">Worker Thread</div>
-            <div class="node-meta">PaymentGateway:42</div>
+            <div class="node-meta">PaymentService:18</div>
           </div>
         </div>
 
@@ -1176,6 +1176,53 @@
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px;">
             <strong>Claim rigorosa:</strong> Reactor: sem diferença mensurável face ao baseline (+0 a 2%, dentro do erro), com <strong>~5x menos alocação</strong> que <code>onOperatorDebug</code>.
           </p>
+      </div>
+
+      <!-- Call Site Modes Microbenchmark Table -->
+      <div style="margin-top: 32px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px;">
+        <h3 style="margin-top: 0; font-size: 18px; color: var(--text-heading);">Call Site Resolution Modes &amp; Empirical Costs</h3>
+        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+          Ariadne allows tailoring the call site capture fidelity via <code>-Dariadne.callsite.mode=class | sampled:N | full</code> or dynamically via JMX MBean (<code>io.ariadne:type=Ariadne</code>):
+        </p>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--border-color); text-align: left;">
+                <th style="padding: 10px 14px; color: var(--text-heading);">Mode</th>
+                <th style="padding: 10px 14px; color: var(--text-heading);">Mechanism</th>
+                <th style="padding: 10px 14px; color: var(--text-heading);">JMH Latency</th>
+                <th style="padding: 10px 14px; color: var(--text-heading);">GC Allocation</th>
+                <th style="padding: 10px 14px; color: var(--text-heading);">Output Example</th>
+                <th style="padding: 10px 14px; color: var(--text-heading);">Recommended Use Case</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 12px 14px;"><strong style="color: var(--accent-red);">CLASS</strong> (Default)</td>
+                <td style="padding: 12px 14px;"><code>ClassValue&lt;Integer&gt;</code> cache</td>
+                <td style="padding: 12px 14px;"><strong>5.73 ns / op</strong></td>
+                <td style="padding: 12px 14px;"><strong>0.0 B / op</strong></td>
+                <td style="padding: 12px 14px;"><code>PaymentService.lambda(PaymentService.java)</code></td>
+                <td style="padding: 12px 14px;">High-throughput production microservices</td>
+              </tr>
+              <tr style="border-bottom: 1px solid var(--border-color);">
+                <td style="padding: 12px 14px;"><strong>SAMPLED:100</strong></td>
+                <td style="padding: 12px 14px;">1 in 100 StackWalker, 99% ClassValue</td>
+                <td style="padding: 12px 14px;"><strong>39.18 ns / op</strong></td>
+                <td style="padding: 12px 14px;"><strong>~9.68 B / op</strong></td>
+                <td style="padding: 12px 14px;">Periodic exact line capture</td>
+                <td style="padding: 12px 14px;">Production services needing sampled lines</td>
+              </tr>
+              <tr>
+                <td style="padding: 12px 14px;"><strong>FULL</strong></td>
+                <td style="padding: 12px 14px;"><code>StackWalker</code> on every dispatch</td>
+                <td style="padding: 12px 14px;"><strong>1,420 ns / op</strong></td>
+                <td style="padding: 12px 14px;"><strong>960 B / op</strong></td>
+                <td style="padding: 12px 14px;"><code>PaymentService.processPayment(PaymentService.java:16)</code></td>
+                <td style="padding: 12px 14px;">Staging, canary tests, local debugging</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -1282,27 +1329,27 @@
   <script>
     // Terminal trace samples
     const traces = {
-      ariadne: `<span class="err-msg">java.lang.NullPointerException: Cannot invoke "Account.balance()" because "account" is null</span>
-    at com.app.billing.InvoiceWorker.process(InvoiceWorker.java:42)
-    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-    at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-    at java.base/java.lang.Thread.run(Thread.java:1583)
-  <span class="frame-ariadne">Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=order_123, tenant=acme}]</span>
-    <span class="frame-ariadne">at com.app.billing.BillingService.chargeCustomer(BillingService.java:114)</span>
-    <span class="frame-ariadne">at com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)</span>
+      ariadne: `<span class="err-msg">java.lang.IllegalStateException: Payment gateway connection timeout [orderId=ORD-2026-999]</span>
+    at io.ariadne.demo.PaymentService.lambda$processPayment$0(PaymentService.java:18)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1781)
+    at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1450)
+  <span class="frame-ariadne">Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=ORD-2026-999, tenant=acme}]</span>
+    <span class="frame-ariadne">at io.ariadne.demo.PaymentService.lambda(PaymentService.java)</span>
+    <span class="frame-ariadne">at io.ariadne.demo.OrderService.placeOrderAsync(OrderService.java:29)</span>
 
-<span class="trace-comment"># [THE SOLUTION]</span>
-<span class="trace-comment"># Complete asynchronous causal hierarchy reconstructed via backward pointer traversal.</span>
-<span class="trace-comment"># Zero stack snapshots captured on preceding successful tasks.</span>`,
-      default: `<span class="err-msg">java.lang.NullPointerException: Cannot invoke "Account.balance()" because "account" is null</span>
-    at com.app.billing.InvoiceWorker.process(InvoiceWorker.java:42)
-    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
-    at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
-    at java.base/java.lang.Thread.run(Thread.java:1583)
+<span class="trace-comment"># [THE SOLUTION — CLASS MODE (Default, Zero Overhead)]</span>
+<span class="trace-comment"># In CLASS mode (default): Resolved via ClassValue&lt;Integer&gt; cache at ~5.7 ns and 0.0 B allocation.</span>
+<span class="trace-comment"># In FULL mode (-Dariadne.callsite.mode=full): Exact source line PaymentService.processPayment(PaymentService.java:16).</span>`,
+      default: `<span class="err-msg">java.lang.IllegalStateException: Payment gateway connection timeout [orderId=ORD-2026-999]</span>
+    at io.ariadne.demo.PaymentService.lambda$processPayment$0(PaymentService.java:18)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1781)
+    at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1450)
 
 <span class="trace-comment"># [THE PROBLEM]</span>
-<span class="trace-comment"># The JVM stack trace stops at runWorker().</span>
-<span class="trace-comment"># Originating method, HTTP request parameters, and caller thread context are permanently missing.</span>`
+<span class="trace-comment"># The standard JVM stack trace stops at the ForkJoinPool worker thread.</span>
+<span class="trace-comment"># Caller service (OrderService.placeOrderAsync), request correlation, and HTTP context are permanently lost.</span>`
     };
 
     function showTrace(type) {

@@ -113,4 +113,21 @@ class SiteRegistryTest {
         assertThat(metadata).isNotNull();
         assertThat(metadata.description()).isEqualTo("Executor.execute");
     }
+
+    @Test
+    void shouldCaptureExactMethodAndLineInFullMode() {
+        AriadneConfig.setCallSiteMode(AriadneConfig.CallSiteMode.FULL);
+        try {
+            Runnable r = () -> {};
+            int id = SiteRegistry.getOrRegister(r.getClass(), "CompletableFuture.supplyAsync");
+            CallSiteMetadata metadata = SiteRegistry.get(id);
+            assertThat(metadata).isNotNull();
+            assertThat(metadata.className()).isEqualTo(SiteRegistryTest.class.getName());
+            assertThat(metadata.methodName()).isEqualTo("shouldCaptureExactMethodAndLineInFullMode");
+            assertThat(metadata.lineNumber()).isGreaterThan(0);
+            assertThat(metadata.fileName()).isEqualTo("SiteRegistryTest.java");
+        } finally {
+            AriadneConfig.resetDefaults();
+        }
+    }
 }

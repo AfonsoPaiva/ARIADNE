@@ -934,6 +934,17 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
               Para que classes do núcleo (<code>java.base</code>) possam invocar o motor de causalidade sem erros de ligação de módulos, o agente injeta o JAR do núcleo no Bootstrap ClassLoader. Em arquiteturas modulares ou com recarga a quente de classes (como servidores OSGi ou contêineres EAR legados), as classes injetadas no bootstrap persistem durante todo o ciclo de vida da JVM.
             </p>
           </div>
+          <div class="wiki-callout info">
+            <h4>4. Modos de Resolução de Call Sites e Custos Empíricos (<code>CallSiteMode</code>)</h4>
+            <p>
+              O Ariadne disponibiliza três estratégias de resolução de call site configuráveis via <code>-Dariadne.callsite.mode=class | sampled:N | full</code> (ou variável <code>ARIADNE_CALLSITE_MODE</code>) e alteráveis em tempo de execução via JMX (<code>io.ariadne:type=Ariadne</code>):
+            </p>
+            <ul>
+              <li><strong><code>CLASS</code> (Padrão, Recomendado para Produção):</strong> Utiliza <code>ClassValue&lt;Integer&gt;</code> para cachear o nome da classe do chamador a partir da classe do lambda/runnable (ex: <code>PaymentService.lambda(PaymentService.java)</code>). Latência medida: <strong>~5.7 ns/op</strong>, com <strong>0.0 B/op</strong> de alocação de memória (elimina completamente o uso de <code>StackWalker</code> no caminho crítico).</li>
+              <li><strong><code>SAMPLED:N</code>:</strong> Amostra 1 em cada N despachos com <code>StackWalker</code> completo para capturar método e linha exatos, atendendo os restantes via <code>ClassValue</code>. Para N=100: <strong>~39.1 ns/op</strong> e <strong>~9.7 B/op</strong>.</li>
+              <li><strong><code>FULL</code>:</strong> Executa <code>StackWalker</code> em cada despacho assíncrono para identificar o método e a linha exatos do chamador (ex: <code>PaymentService.processPayment(PaymentService.java:16)</code>). Latência: <strong>~1.42 µs/op</strong> e <strong>~960 B/op</strong>. Recomendado para ambientes de homologação, testes canário e depuração localizada.</li>
+            </ul>
+          </div>
         </section>
 
         <!-- 16. Getting Started -->

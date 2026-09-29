@@ -3,6 +3,7 @@ package io.ariadne.core;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Thread-safe global registry mapping integer site IDs to CallSiteMetadata.
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class SiteRegistry {
 
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(1);
+    private static final AtomicLong DISPATCH_COUNTER = new AtomicLong();
     private static final Map<Integer, CallSiteMetadata> BY_ID = new ConcurrentHashMap<>();
     private static final Map<CallSiteMetadata, Integer> BY_METADATA = new ConcurrentHashMap<>();
     private static final Map<String, Integer> BY_DESCRIPTION = new ConcurrentHashMap<>();
@@ -62,15 +64,28 @@ public final class SiteRegistry {
     }
 
     /**
-     * Resolves or registers a call site from a lambda or Runnable/Callable class using ClassValue<Integer> caching.
-     * Extracts the user's enclosing class (e.g. from OrderService$$Lambda/...) without using StackWalker,
-     * delivering caller identity at near-zero cost (~1-2 ns, 0 B allocation).
+     * Resolves or registers a call site based on the configured CallSiteMode:
+     * <ul>
+     *   <li>{@code CLASS}: Resolves user caller class via ClassValue<Integer> at near-zero overhead (~1-2 ns, 0 B).</li>
+     *   <li>{@code FULL}: Captures exact caller method and line number on every dispatch via StackWalker (~1-2 µs).</li>
+     *   <li>{@code SAMPLED}: Samples 1 in N dispatches via StackWalker, using CLASS mode for the rest.</li>
+     * </ul>
      *
      * @param taskClass The runtime class of the task or lambda being dispatched
      * @param fallbackDescription Fallback description if the class is an infrastructure wrapper
      * @return Deterministic siteId for this call site
      */
     public static int getOrRegister(Class<?> taskClass, String fallbackDescription) {
+        AriadneConfig.CallSiteMode mode = AriadneConfig.getCallSiteMode();
+        if (mode == AriadneConfig.CallSiteMode.FULL) {
+            return captureCallerSiteId(0, fallbackDescription);
+        }
+        if (mode == AriadneConfig.CallSiteMode.SAMPLED) {
+            int rate = AriadneConfig.getCallSiteSampleRate();
+            if (rate <= 1 || (DISPATCH_COUNTER.incrementAndGet() % rate) == 0) {
+                return captureCallerSiteId(0, fallbackDescription);
+            }
+        }
         if (taskClass == null) {
             return getOrRegister(fallbackDescription);
         }
@@ -183,6 +198,14 @@ public final class SiteRegistry {
      * Captures the immediate calling frame outside of Ariadne infrastructure.
      * Uses StackWalker with shallow depth for minimal overhead.
      */
+    public static int captureCallerSiteId(String description) {
+        return captureCallerSiteId(0, description);
+    }
+
+    /**
+     * Captures the immediate calling frame outside of Ariadne infrastructure.
+     * Uses StackWalker with shallow depth for minimal overhead.
+     */
     public static int captureCallerSiteId(int skipFrames, String description) {
         return STACK_WALKER.walk(frames -> {
             var frameOpt = frames
@@ -191,7 +214,7 @@ public final class SiteRegistry {
                     .findFirst();
 
             if (frameOpt.isEmpty()) {
-                return 0;
+                return getOrRegister(description);
             }
 
             StackWalker.StackFrame frame = frameOpt.get();
@@ -212,8 +235,14 @@ public final class SiteRegistry {
                 || className.equals(AriadneRunnable.class.getName())
                 || className.equals(AriadneCallable.class.getName())
                 || className.equals(AriadneReconstructor.class.getName())
-                || className.startsWith("io.ariadne.agent.")
-                || className.startsWith("io.ariadne.adapter.");
+                || (className.startsWith("io.ariadne.agent.") && !className.endsWith("Test") && !className.contains("Test$"))
+                || className.startsWith("io.ariadne.adapter.")
+                || className.startsWith("java.util.concurrent.")
+                || className.startsWith("java.lang.Thread")
+                || className.startsWith("java.lang.reflect.")
+                || className.startsWith("jdk.internal.")
+                || className.startsWith("sun.")
+                || className.startsWith("net.bytebuddy.");
     }
 
     /**

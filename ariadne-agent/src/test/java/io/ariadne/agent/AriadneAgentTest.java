@@ -232,4 +232,83 @@ class AriadneAgentTest {
                                     && t.getMessage().contains("hop"));
                 });
     }
+
+    @Test
+    void shouldCaptureCallerTestFrameInAsyncCausalityExceptionInClassMode() {
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+            throw new IllegalStateException("Simulated crash in background task (class mode)");
+        });
+
+        assertThatThrownBy(future::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(IllegalStateException.class)
+                .satisfies(ex -> {
+                    Throwable cause = ex.getCause();
+                    Throwable[] suppressed = cause.getSuppressed();
+                    assertThat(suppressed)
+                            .as("Suppressed exceptions must contain AsyncCausalityException")
+                            .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"));
+
+                    Throwable causalityException = java.util.Arrays.stream(suppressed)
+                            .filter(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"))
+                            .findFirst()
+                            .orElseThrow();
+
+                    StackTraceElement[] frames = causalityException.getStackTrace();
+                    String testClassName = AriadneAgentTest.class.getName();
+                    boolean hasCallerFrame = java.util.Arrays.stream(frames)
+                            .anyMatch(f -> f.getClassName().equals(testClassName) || f.getClassName().startsWith(testClassName + "$"));
+
+                    assertThat(hasCallerFrame)
+                            .as("Reconstructed AsyncCausalityException must contain caller test frame (%s), but got frames: %s",
+                                    testClassName, java.util.Arrays.toString(frames))
+                            .isTrue();
+                });
+    }
+
+    @Test
+    void shouldCaptureCallerTestFrameInAsyncCausalityExceptionInFullMode() throws Exception {
+        Class<?> configClass = Class.forName("io.ariadne.core.AriadneConfig", true, null);
+        configClass.getMethod("setCallSiteMode", String.class).invoke(null, "full");
+        try {
+            CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+                throw new IllegalStateException("Simulated crash in background task (full mode)");
+            });
+
+            assertThatThrownBy(future::join)
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .satisfies(ex -> {
+                        Throwable cause = ex.getCause();
+                        Throwable[] suppressed = cause.getSuppressed();
+                        assertThat(suppressed)
+                                .as("Suppressed exceptions must contain AsyncCausalityException")
+                                .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"));
+
+                        Throwable causalityException = java.util.Arrays.stream(suppressed)
+                                .filter(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException"))
+                                .findFirst()
+                                .orElseThrow();
+
+                        StackTraceElement[] frames = causalityException.getStackTrace();
+                        String testClassName = AriadneAgentTest.class.getName();
+                        StackTraceElement callerFrame = java.util.Arrays.stream(frames)
+                                .filter(f -> f.getClassName().equals(testClassName))
+                                .findFirst()
+                                .orElse(null);
+
+                        assertThat(callerFrame)
+                                .as("Reconstructed AsyncCausalityException must contain caller frame %s, got: %s",
+                                        testClassName, java.util.Arrays.toString(frames))
+                                .isNotNull();
+
+                        assertThat(callerFrame.getMethodName())
+                                .isEqualTo("shouldCaptureCallerTestFrameInAsyncCausalityExceptionInFullMode");
+                        assertThat(callerFrame.getLineNumber())
+                                .isGreaterThan(0);
+                    });
+        } finally {
+            configClass.getMethod("resetDefaults").invoke(null);
+        }
+    }
 }

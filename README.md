@@ -35,18 +35,28 @@ When an unhandled exception is thrown on a worker thread, the JVM stack trace st
 
 ```
 [DEFAULT JVM STACK TRACE]
-java.lang.NullPointerException: Cannot invoke "Account.balance()"
-    at com.app.billing.InvoiceWorker.process(InvoiceWorker.java:42)
-    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(...)
-    # BLIND SPOT: Originating caller context and HTTP parameters are permanently lost.
+java.lang.IllegalStateException: Payment gateway connection timeout [orderId=ORD-2026-999]
+    at io.ariadne.demo.PaymentService.lambda$processPayment$0(PaymentService.java:18)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.exec(CompletableFuture.java:1781)
+    at java.base/java.util.concurrent.ForkJoinPool$WorkQueue.topLevelExec(ForkJoinPool.java:1450)
+    # BLIND SPOT: Originating caller method and HTTP request parameters are permanently lost.
 
-[WITH ARIADNE]
-java.lang.NullPointerException: Cannot invoke "Account.balance()"
-    at com.app.billing.InvoiceWorker.process(InvoiceWorker.java:42)
-    at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(...)
-    Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=order_123, tenant=acme}]
-        at com.app.billing.BillingService.chargeCustomer(BillingService.java:114)
-        at com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)
+[WITH ARIADNE — CLASS MODE (Default, Zero Overhead)]
+java.lang.IllegalStateException: Payment gateway connection timeout [orderId=ORD-2026-999]
+    at io.ariadne.demo.PaymentService.lambda$processPayment$0(PaymentService.java:18)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+    Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=ORD-2026-999}]
+        at io.ariadne.demo.PaymentService.lambda(PaymentService.java)
+        at io.ariadne.agent.Executor.execute(Unknown Source)
+
+[WITH ARIADNE — FULL MODE (-Dariadne.callsite.mode=full)]
+java.lang.IllegalStateException: Payment gateway connection timeout [orderId=ORD-2026-999]
+    at io.ariadne.demo.PaymentService.lambda$processPayment$0(PaymentService.java:18)
+    at java.base/java.util.concurrent.CompletableFuture$AsyncSupply.run(CompletableFuture.java:1789)
+    Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=ORD-2026-999}]
+        at io.ariadne.demo.PaymentService.processPayment(PaymentService.java:16)
+        at org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor$1.execute(ThreadPoolTaskExecutor.java:295)
 ```
 
 ### Why Ariadne is Designed for Production Safety
@@ -54,7 +64,7 @@ java.lang.NullPointerException: Cannot invoke "Account.balance()"
 Traditional diagnostic tools capture full JVM stack traces (`new Throwable()`) on **every single task dispatch or operator creation**, devouring CPU cycles and causing severe GC pressure (often 10×–100× throughput degradation).
 
 Ariadne uses **lazy backward pointer traversal**:
-1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 40-byte record (`Link`) in thread-local TLAB memory. Call sites are statically cached in a lock-free registry (`SiteRegistry`) during agent instrumentation (avoiding `StackWalker` overhead on hot dispatch paths).
+1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 40-byte record (`Link`) in thread-local TLAB memory. In default `CLASS` mode, call sites are resolved via a `ClassValue<Integer>` cache avoiding `StackWalker` overhead on hot dispatch paths (~5.7 ns, 0 B allocation).
 2. **End-to-End Hop Efficiency:** Because OS thread scheduling and handoff latency dominate async dispatch (~28 µs), nanosecond-level claims on multi-threaded dispatches are unrealistic. Instead, Ariadne delivers empirically defensible results:
    - **Project Reactor:** Sem diferença mensurável face ao baseline (+0 a 2%, dentro da margem de erro estatístico), com **~5x menos alocação** que o `Hooks.onOperatorDebug()` nativo do Reactor.
    - **Agente com CompletableFuture:** Overhead medido de **~1 a 2 µs por pipeline de 3 hops**, com uma pegada de alocação de **~230 B por hop** (incluindo o nó `Link` de 40 B, wrappers de execução e nós de continuação).
@@ -127,9 +137,23 @@ dependencies {
 | :--- | :---: | :---: | :--- |
 | **Context Read (`current()`)** | **~2 ns** | **0 B** | Single volatile / ThreadLocal carrier read |
 | **Direct Link Allocation** | **&lt; 4 ns** | **40 B** | HotSpot 64-bit object layout with Compressed OOPs |
-| **Context Hop (`spawn`)** | **&lt; 5 ns** | **40 B** | Parent lookup + TLAB Link allocation + depth check |
-| **Scoped Attach / Restore** | **&lt; 8 ns** | **0 B** | AutoCloseable scope restoring previous thread link |
-| **Cached Site Lookup** | **&lt; 5 ns** | **0 B** | `BY_DESCRIPTION` concurrent map lookup (zero object churn) |
+| **Context Hop (`spawn`)** | **&lt; 6 ns** | **40 B** | Parent lookup + TLAB Link allocation + depth check |
+| **Scoped Attach / Restore** | **&lt; 15 ns** | **0 B** | AutoCloseable scope restoring previous thread link |
+| **Call Site Resolution (`CLASS` mode)** | **~5.7 ns** | **0.0 B** | `ClassValue<Integer>` user class resolution (zero GC churn) |
+| **Call Site Resolution (`SAMPLED:100` mode)** | **~39.1 ns** | **~9.7 B** | 1 in 100 StackWalker sample, 99% ClassValue lookup |
+| **Call Site Resolution (`FULL` mode)** | **~1.42 µs** | **~960 B** | Exact caller method and source line via `StackWalker` |
+
+### Call Site Modes Configuration
+
+Call site capture can be tailored to the environment via `-Dariadne.callsite.mode=<mode>` or env var `ARIADNE_CALLSITE_MODE`:
+
+| Mode | Property / Setting | Trade-off & Behavior |
+| :--- | :--- | :--- |
+| **`class`** *(Default)* | `-Dariadne.callsite.mode=class` | Captures dispatching class (`PaymentService.lambda(PaymentService.java)`) at **~5.7 ns** and **0 B allocation**. Recommended for production. |
+| **`sampled:N`** | `-Dariadne.callsite.mode=sampled:100` | Walks stack on 1 of every N dispatches (**~39 ns**, **~9.7 B/op** for N=100), serving the remaining 99% from `ClassValue`. |
+| **`full`** | `-Dariadne.callsite.mode=full` | Traverses full call stack on every dispatch (**~1.42 µs**, **~960 B/op**) for exact method and line number (`PaymentService.processPayment(PaymentService.java:16)`). Recommended for staging and debugging. |
+
+*Can also be inspected or modified at runtime via JMX MBean `io.ariadne:type=Ariadne` (`CallSiteMode` and `CallSiteSampleRate`).*
 
 ### End-to-End Asynchronous Pipelines (Multi-threaded & Agent)
 
@@ -208,7 +232,7 @@ mvn test-compile
 
 ### Core Design Rules for Contributions
 1. **Zero External Production Dependencies in Core:** The `ariadne-core` module must remain completely free of external dependencies, relying only on the standard Java 21 runtime.
-2. **Lock-Free & Low Allocation:** Hot execution paths must use lock-free atomic primitives, immutable 32-byte link records, and avoid thread contention.
+2. **Lock-Free & Low Allocation:** Hot execution paths must use lock-free atomic primitives, immutable 40-byte link records, and avoid thread contention.
 3. **No ThreadLocal Leaks:** All context attachments must cleanly restore previous contexts upon task completion (e.g. via `try-with-resources`).
 4. **Memory Retention Safety:** Causal depth must be capped to prevent unbounded retention in long-lived or recursive task chains.
 5. **Performance Verification:** Any changes touching scheduling, context propagation, or bytecode instrumentation must be benchmarked with JMH before submission:

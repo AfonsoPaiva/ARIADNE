@@ -97,4 +97,67 @@ public class CoreOperationsBenchmark {
     public int cachedSiteRegistryLookup() {
         return SiteRegistry.getOrRegister("Benchmark.callSite");
     }
+
+    @State(Scope.Benchmark)
+    public static class ClassModeState {
+        final Runnable task = () -> {};
+
+        @Setup(org.openjdk.jmh.annotations.Level.Trial)
+        public void setup() {
+            io.ariadne.core.AriadneConfig.setCallSiteMode(io.ariadne.core.AriadneConfig.CallSiteMode.CLASS);
+            SiteRegistry.getOrRegister(task.getClass(), "Benchmark.fallback");
+        }
+
+        @TearDown(org.openjdk.jmh.annotations.Level.Trial)
+        public void tearDown() {
+            io.ariadne.core.AriadneConfig.resetDefaults();
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class SampledModeState {
+        final Runnable task = () -> {};
+
+        @Setup(org.openjdk.jmh.annotations.Level.Trial)
+        public void setup() {
+            io.ariadne.core.AriadneConfig.setCallSiteMode("sampled:100");
+            SiteRegistry.getOrRegister(task.getClass(), "Benchmark.fallback");
+        }
+
+        @TearDown(org.openjdk.jmh.annotations.Level.Trial)
+        public void tearDown() {
+            io.ariadne.core.AriadneConfig.resetDefaults();
+        }
+    }
+
+    @State(Scope.Benchmark)
+    public static class FullModeState {
+        final Runnable task = () -> {};
+
+        @Setup(org.openjdk.jmh.annotations.Level.Trial)
+        public void setup() {
+            io.ariadne.core.AriadneConfig.setCallSiteMode(io.ariadne.core.AriadneConfig.CallSiteMode.FULL);
+            SiteRegistry.getOrRegister(task.getClass(), "Benchmark.fallback");
+        }
+
+        @TearDown(org.openjdk.jmh.annotations.Level.Trial)
+        public void tearDown() {
+            io.ariadne.core.AriadneConfig.resetDefaults();
+        }
+    }
+
+    @Benchmark
+    public int callSiteResolutionClassMode(ClassModeState state) {
+        return SiteRegistry.getOrRegister(state.task.getClass(), "Benchmark.fallback");
+    }
+
+    @Benchmark
+    public int callSiteResolutionSampledMode(SampledModeState state) {
+        return SiteRegistry.getOrRegister(state.task.getClass(), "Benchmark.fallback");
+    }
+
+    @Benchmark
+    public int callSiteResolutionFullMode(FullModeState state) {
+        return SiteRegistry.getOrRegister(state.task.getClass(), "Benchmark.fallback");
+    }
 }

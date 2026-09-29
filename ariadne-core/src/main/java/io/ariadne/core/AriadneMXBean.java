@@ -49,6 +49,16 @@ public interface AriadneMXBean {
      */
     void setMdcPropagationEnabled(boolean enabled);
 
+    /**
+     * Gets the current call site tracking mode (e.g. CLASS, SAMPLED:100, FULL).
+     */
+    String getCallSiteMode();
+
+    /**
+     * Dynamically sets the call site tracking mode (e.g. "class", "sampled:50", "full").
+     */
+    void setCallSiteMode(String mode);
+
     // Observability & Metrics Attributes (Read-only)
 
     /**

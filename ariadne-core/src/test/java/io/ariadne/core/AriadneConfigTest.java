@@ -69,6 +69,8 @@ class AriadneConfigTest {
         AriadneConfig.setCanaryProbesEnabled(false);
         AriadneConfig.setFailFast(true);
         AriadneConfig.setJmxEnabled(false);
+        AriadneConfig.setCallSiteMode(AriadneConfig.CallSiteMode.FULL);
+        AriadneConfig.setCallSiteSampleRate(25);
 
         AriadneConfig.resetDefaults();
 
@@ -76,5 +78,22 @@ class AriadneConfigTest {
         assertThat(AriadneConfig.isCanaryProbesEnabled()).isTrue();
         assertThat(AriadneConfig.isFailFast()).isFalse();
         assertThat(AriadneConfig.isJmxEnabled()).isTrue();
+        assertThat(AriadneConfig.getCallSiteMode()).isEqualTo(AriadneConfig.CallSiteMode.CLASS);
+        assertThat(AriadneConfig.getCallSiteSampleRate()).isEqualTo(100);
+    }
+
+    @Test
+    void shouldDynamicallyUpdateCallSiteMode() {
+        assertThat(AriadneConfig.getCallSiteMode()).isEqualTo(AriadneConfig.CallSiteMode.CLASS);
+
+        AriadneConfig.setCallSiteMode(AriadneConfig.CallSiteMode.FULL);
+        assertThat(AriadneConfig.getCallSiteMode()).isEqualTo(AriadneConfig.CallSiteMode.FULL);
+
+        AriadneConfig.setCallSiteMode("sampled:20");
+        assertThat(AriadneConfig.getCallSiteMode()).isEqualTo(AriadneConfig.CallSiteMode.SAMPLED);
+        assertThat(AriadneConfig.getCallSiteSampleRate()).isEqualTo(20);
+
+        AriadneConfig.setCallSiteMode("class");
+        assertThat(AriadneConfig.getCallSiteMode()).isEqualTo(AriadneConfig.CallSiteMode.CLASS);
     }
 }

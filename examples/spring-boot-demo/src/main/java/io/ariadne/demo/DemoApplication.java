@@ -54,6 +54,8 @@ public class DemoApplication {
         // Install Ariadne adapters for reactive and MDC context
         AriadneReactorAdapter.install();
         AriadneMdcAdapter.install();
+        System.out.println("Active Ariadne CallSite Mode: " + io.ariadne.core.AriadneConfig.getCallSiteMode()
+                + " (sample rate: " + io.ariadne.core.AriadneConfig.getCallSiteSampleRate() + ")");
 
         try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
             context.register(DemoApplication.class);

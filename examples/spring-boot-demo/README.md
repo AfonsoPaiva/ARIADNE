@@ -50,14 +50,14 @@ Message:        Payment gateway connection timeout [orderId=ORD-2026-999]
 
 ---
 
-### Scenario B: With Ariadne Agent (Attached via `-javaagent`)
+### Scenario B: With Ariadne Agent (Default `CLASS` Mode — Near-Zero Overhead)
 
 ```bash
 java -javaagent:ariadne-agent/target/ariadne-agent-0.1.0-alpha.2.jar \
      -jar examples/spring-boot-demo/target/spring-boot-demo-0.1.0-alpha.2.jar
 ```
 
-**Real Output Observed:**
+**Real Output Observed (Default `CLASS` Mode with `ClassValue` cache):**
 ```text
 >>> SCENARIO 1: Spring @Async + CompletableFuture Multi-Hop Exception
 OrderController calls OrderService.placeOrderAsync() -> PaymentService.processPayment()
@@ -68,7 +68,7 @@ Message:        Payment gateway connection timeout [orderId=ORD-2026-999]
 
 >>> [AFTER: ARIADNE RECONSTRUCTION DETECTED]
   Asynchronous execution path (2 hops)
-    at io.ariadne.agent.CompletableFuture.supplyAsync(Unknown Source)
+    at io.ariadne.demo.PaymentService.lambda(PaymentService.java)
     at io.ariadne.agent.Executor.execute(Unknown Source)
   --> Causality across asynchronous thread boundaries successfully preserved!
 
@@ -83,9 +83,41 @@ Message:        Inventory deduction failed for: validated-ORD-2026-888
 
 >>> [AFTER: ARIADNE RECONSTRUCTION DETECTED]
   Asynchronous execution path (2 hops) [Context: {traceId=req-89a1f4b2, userId=afonso-paiva}]
-    at reactor.core.scheduler.Schedulers.onSchedule(Schedulers.java:996)
-    at reactor.core.scheduler.Schedulers.onSchedule(Schedulers.java:996)
+    at io.ariadne.agent.Reactor Scheduler Dispatch(Unknown Source)
+    at io.ariadne.agent.Reactor Scheduler Dispatch(Unknown Source)
   --> Causality across asynchronous thread boundaries successfully preserved!
 ```
-- The synthetic stack trace accurately reconstructs the full causal chain across threads.
-- MDC correlation keys (`traceId`, `userId`) are seamlessly propagated and attached to the causal exception.
+
+---
+
+### Scenario C: With Ariadne Agent in `FULL` Mode (Exact Method & Line Number)
+
+When detailed source line diagnostics are required (e.g., in staging or debugging), set `-Dariadne.callsite.mode=full`:
+
+```bash
+java -javaagent:ariadne-agent/target/ariadne-agent-0.1.0-alpha.2.jar \
+     -Dariadne.callsite.mode=full \
+     -jar examples/spring-boot-demo/target/spring-boot-demo-0.1.0-alpha.2.jar
+```
+
+**Real Output Observed (`FULL` Mode with exact StackWalker line capture):**
+```text
+>>> [AFTER: ARIADNE RECONSTRUCTION DETECTED]
+  Asynchronous execution path (2 hops)
+    at io.ariadne.demo.PaymentService.processPayment(PaymentService.java:16)
+    at org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor$1.execute(ThreadPoolTaskExecutor.java:295)
+  --> Causality across asynchronous thread boundaries successfully preserved with exact method and line numbers!
+```
+
+---
+
+## Call Site Resolution Modes & Benchmark Costs
+
+Ariadne supports 3 call site resolution modes configured via `-Dariadne.callsite.mode=<mode>` or `ARIADNE_CALLSITE_MODE=<mode>` (and dynamically via JMX MBean `io.ariadne:type=Ariadne`):
+
+| Mode | Configuration Flag | Resolution Mechanism | JMH Latency | GC Allocation | Description & Use Case |
+| :--- | :--- | :--- | :---: | :---: | :--- |
+| **`CLASS`** *(Default)* | `-Dariadne.callsite.mode=class` | `ClassValue<Integer>` cache | **~5.7 ns/op** | **0.0 B/op** | Resolves dispatching class (`PaymentService.lambda(PaymentService.java)`) at zero allocation. Recommended for production high-throughput services. |
+| **`SAMPLED:N`** | `-Dariadne.callsite.mode=sampled:100` | Counter + `StackWalker` (1 in N) | **~39.1 ns/op** | **~9.7 B/op** | Samples 1 in every N dispatches with full line capture, falling back to `ClassValue` for the remaining 99%. Ideal for low-overhead sampling. |
+| **`FULL`** | `-Dariadne.callsite.mode=full` | `StackWalker` on every dispatch | **~1.42 µs/op** | **~960 B/op** | Captures exact method name and source line (`PaymentService.processPayment(PaymentService.java:16)`). Recommended for staging, canary testing, or debugging. |
+

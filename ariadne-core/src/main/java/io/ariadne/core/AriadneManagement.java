@@ -122,6 +122,20 @@ public final class AriadneManagement implements AriadneMXBean {
     }
 
     @Override
+    public String getCallSiteMode() {
+        AriadneConfig.CallSiteMode mode = AriadneConfig.getCallSiteMode();
+        if (mode == AriadneConfig.CallSiteMode.SAMPLED) {
+            return "SAMPLED:" + AriadneConfig.getCallSiteSampleRate();
+        }
+        return mode.name();
+    }
+
+    @Override
+    public void setCallSiteMode(String mode) {
+        AriadneConfig.setCallSiteMode(mode);
+    }
+
+    @Override
     public long getHopsSpawned() {
         return AriadneMetrics.getHopsSpawned();
     }
