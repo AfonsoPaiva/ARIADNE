@@ -4,14 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ariadne Wiki & Technical Reference Manual</title>
+  <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="Images/icon-escuro.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Source+Serif+Pro:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <style>
     :root {
       --accent-red: #911010;
+      --accent-red-hover: #720C0C;
       --font-title: 'Source Serif Pro', Georgia, serif;
-      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
       --sidebar-width: 280px;
     }
 
@@ -99,7 +101,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      height: 68px;
+      height: 70px;
     }
 
     .brand {
@@ -110,7 +112,7 @@
     }
 
     .brand-logo {
-      height: 34px;
+      height: 38px;
       width: auto;
       display: block;
     }
@@ -145,7 +147,7 @@
     }
 
     .nav-link {
-      font-size: 14px;
+      font-size: 13.5px;
       font-weight: 600;
       color: var(--text-main);
       transition: color 0.15s ease;
@@ -155,16 +157,28 @@
       color: var(--text-heading);
     }
 
+    .nav-badge {
+      display: inline-block;
+      background-color: var(--accent-red);
+      color: #FFFFFF;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      margin-left: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
     .theme-toggle-btn {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       background-color: var(--theme-btn-bg);
       color: var(--theme-btn-text);
       border: 1px solid var(--theme-btn-border);
-      padding: 6px 14px;
+      padding: 6px 12px;
       font-family: var(--font-body);
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.15s ease;
@@ -173,15 +187,26 @@
     .nav-btn-gh {
       background-color: var(--accent-red);
       color: #FFFFFF;
-      padding: 8px 16px;
+      padding: 7px 14px;
       font-size: 13px;
       font-weight: 700;
       border: 1px solid var(--accent-red);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       transition: background-color 0.15s ease;
     }
 
     .nav-btn-gh:hover {
-      background-color: #720C0C;
+      background-color: var(--accent-red-hover, #720C0C);
+    }
+
+    .nav-btn-gh svg {
+      width: 15px;
+      height: 15px;
+      fill: currentColor;
+      flex-shrink: 0;
     }
 
     /* Wiki Layout */
@@ -449,6 +474,10 @@
       .wiki-wrapper { flex-direction: column; gap: 32px; }
       .sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--border-color); padding-bottom: 24px; }
     }
+
+    @media (max-width: 600px) {
+      nav .nav-link { display: none; }
+    }
   </style>
 </head>
 <body data-theme="dark">
@@ -462,16 +491,26 @@
         <span class="brand-sub">/ WIKI</span>
       </a>
       <nav>
-        <a href="index.html" class="nav-link">Home</a>
+        <a href="index.html#problem-solution" class="nav-link">Problem &amp; Solution</a>
+        <a href="index.html#architecture" class="nav-link">Architecture</a>
         <a href="index.html#benchmarks" class="nav-link">Benchmarks</a>
-        <a href="index.html#versions" class="nav-link">Versions</a>
+        <a href="index.html#setup" class="nav-link">How to setup</a>
+        <a href="index.html#versions" class="nav-link">
+          Releases <span class="nav-badge">v0.1.0-alpha.2</span>
+        </a>
+        <a href="wiki.html" class="nav-link" style="color: var(--text-heading); font-weight: 700;">Wiki Docs</a>
 
-        <button id="themeToggle" class="theme-toggle-btn" type="button" aria-label="Toggle light or dark theme">
+        <button id="themeToggle" class="theme-toggle-btn" type="button" aria-label="Toggle theme">
           <span id="themeIcon">☀️</span>
-          <span id="themeText">Light Mode</span>
+          <span id="themeText">Light</span>
         </button>
 
-        <a href="https://github.com/AfonsoPaiva/ARIADNE" target="_blank" rel="noopener" class="nav-btn">GitHub Repo</a>
+        <a href="https://github.com/AfonsoPaiva/ARIADNE" target="_blank" rel="noopener" class="nav-btn-gh" aria-label="GitHub Repository">
+          <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          Repo
+        </a>
       </nav>
     </div>
   </header>
@@ -516,19 +555,15 @@
 
         <!-- 1. Introduction -->
         <section class="wiki-section" id="intro">
-          <h2>1. Introduction & Motivation</h2>
-          <p>
-            In Greek mythology, Princess Ariadne gave Theseus a clew of golden thread to unwind as he entered the labyrinth,
-            allowing him to retrace his path backwards and escape after slaying the Minotaur.
-          </p>
+          <h2>1. Introduction &amp; Motivation</h2>
           <p>
             In modern JVM systems, asynchronous programming models—including thread pools, <code>CompletableFuture</code>,
-            Project Reactor, RxJava, and Java 21 Virtual Threads—create a computational labyrinth. When an execution fails on a
+            Project Reactor, RxJava, and Java 21 Virtual Threads—introduce severe observability challenges. When an execution fails on a
             worker thread, standard JVM stack traces are severed at the async boundary. Developers are left with blind, truncated
             exceptions that show where the code crashed, but not <em>who scheduled it</em> or <em>why it was called</em>.
           </p>
           <p>
-            <strong>Ariadne</strong> provides the missing thread. It maintains a continuous causal record across threads with
+            <strong>Ariadne</strong> solves this problem. It maintains a continuous causal record across threads with
             sub-microsecond overhead, reconstructing the full asynchronous ancestry only when an error actually occurs.
           </p>
         </section>
@@ -900,14 +935,22 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
         applyTheme(next);
       });
 
+      function updateFavicon(theme) {
+        const favicon = document.getElementById('dynamicFavicon');
+        if (favicon) {
+          favicon.href = (theme === 'dark') ? 'Images/icon-escuro.svg' : 'Images/icon-branco.svg';
+        }
+      }
+
       function applyTheme(theme) {
         document.body.setAttribute('data-theme', theme);
         localStorage.setItem('ariadne-theme', theme);
+        updateFavicon(theme);
         if (theme === 'dark') {
-          text.textContent = 'Light Mode';
+          text.textContent = 'Light';
           icon.textContent = '☀️';
         } else {
-          text.textContent = 'Dark Mode';
+          text.textContent = 'Dark';
           icon.textContent = '🌙';
         }
       }
