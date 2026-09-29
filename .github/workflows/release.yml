@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    name: Build & Publish Release
+    name: Build, Benchmark & Publish Release
     runs-on: ubuntu-latest
 
     steps:
@@ -27,6 +27,14 @@ jobs:
       - name: Build and Package
         run: mvn -B clean package -DskipTests
 
+      - name: Run JMH Benchmarks (with GC Profiling)
+        run: |
+          java -jar ariadne-benchmarks/target/benchmarks.jar \
+            -rf json \
+            -rff benchmark-results.json \
+            -prof gc \
+            -wi 2 -w 1s -i 3 -r 1s -f 1
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -37,5 +45,6 @@ jobs:
             ariadne-adapter-rxjava/target/ariadne-adapter-rxjava-*.jar
             ariadne-adapter-mdc/target/ariadne-adapter-mdc-*.jar
             ariadne-benchmarks/target/benchmarks.jar
+            benchmark-results.json
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
