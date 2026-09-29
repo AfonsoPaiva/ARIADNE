@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.ariadne</groupId>
+        <groupId>io.github.afonsopaiva</groupId>
         <artifactId>ariadne-parent</artifactId>
         <version>0.1.0-alpha.2</version>
     </parent>
@@ -18,23 +18,23 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-reactor</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-rxjava</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-mdc</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-agent</artifactId>
         </dependency>
 

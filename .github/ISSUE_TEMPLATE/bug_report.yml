@@ -1,0 +1,63 @@
+name: 🐛 Bug Report
+description: Report a reproducible defect or unexpected behavior in Ariadne
+title: "[BUG]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue! Please provide as much detail as possible to help us triage and fix it quickly.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe the problem...
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Runtime Environment
+      description: Operating System, JDK distribution, and exact Java version.
+      placeholder: "e.g., Ubuntu 22.04 LTS, Eclipse Temurin 21.0.2 LTS, x86_64"
+    validations:
+      required: true
+
+  - type: input
+    id: frameworks
+    attributes:
+      label: Framework Versions
+      description: Versions of related frameworks in use (Spring Boot, Project Reactor, RxJava, etc.).
+      placeholder: "e.g., Spring Boot 3.3.0, Project Reactor 3.6.4"
+    validations:
+      required: false
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce & Code Snippet
+      description: Minimal reproducible example demonstrating the issue.
+      placeholder: |
+        1. Start application with `-javaagent:ariadne-agent.jar`
+        2. Run CompletableFuture pipeline...
+        3. Observe missing stack trace / exception...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Stack Traces & Logs
+      description: Paste any full stack traces or log output here.
+      render: shell

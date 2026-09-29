@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Exclude test classes and benchmarks -->
+    <Match>
+        <Class name="~.*\.*Test.*" />
+    </Match>
+    <Match>
+        <Class name="~io\.ariadne\.benchmark\..*" />
+    </Match>
+    <Match>
+        <Class name="~io\.ariadne\.demo\..*" />
+    </Match>
+
+    <!-- Exclude generated JMH classes -->
+    <Match>
+        <Class name="~.*_jmhType.*" />
+    </Match>
+    <Match>
+        <Class name="~.*_jmhTest.*" />
+    </Match>
+
+    <!-- Exclude ByteBuddy shaded package -->
+    <Match>
+        <Package name="~io\.ariadne\.shaded\..*" />
+    </Match>
+
+    <!-- Allow public static mutable caches in SiteRegistry and AriadneConfig designed for zero-allocation performance -->
+    <Match>
+        <Class name="io.ariadne.core.SiteRegistry" />
+        <Bug pattern="MS_MUTABLE_COLLECTION_PKGPROTECT,MS_PKGPROTECT" />
+    </Match>
+    <Match>
+        <Class name="io.ariadne.core.AriadneConfig" />
+        <Bug pattern="MS_SHOULD_BE_FINAL" />
+    </Match>
+</FindBugsFilter>

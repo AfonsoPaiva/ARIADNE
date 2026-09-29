@@ -6,21 +6,42 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   build:
-    name: Build & Test (Java 21)
+    name: Build & Verify (JDK ${{ matrix.java-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java-version: ['21', '23']
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up JDK 21
+      - name: Set up JDK ${{ matrix.java-version }}
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ matrix.java-version }}
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Run Tests
-        run: mvn -B clean verify
+      - name: Build, Test, JaCoCo Coverage & SpotBugs Check
+        run: mvn -B clean verify -P ci
+
+      - name: Upload JaCoCo Coverage Report
+        if: matrix.java-version == '21' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-coverage-report
+          path: '**/target/site/jacoco/'
+
+      - name: Upload SpotBugs Report
+        if: matrix.java-version == '21' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-report
+          path: '**/target/spotbugsXml.xml'

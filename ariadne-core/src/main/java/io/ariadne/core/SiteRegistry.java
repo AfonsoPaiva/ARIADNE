@@ -10,9 +10,30 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>
  * Ensures O(1) lock-free lookups and caches repeated call sites so that the same
  * invocation point shares a single siteId.
+ * </p>
+ * <h3>Architectural Design &amp; Static State Lifecycle:</h3>
+ * <ul>
+ *   <li><b>ClassLoader Independence:</b> {@link CallSiteMetadata} exclusively stores primitive ints
+ *       and {@link String} descriptors. It holds <i>no</i> direct or indirect references to {@link Class}
+ *       or {@link ClassLoader} instances. Consequently, undeploying or reloading a web application
+ *       in a servlet container (e.g., Apache Tomcat, Eclipse Jetty) will never leak classloader references.</li>
+ *   <li><b>ClassValue GC Reclamation:</b> The internal {@link ClassValue} cache stores site IDs directly
+ *       in the hidden field of the target {@link Class}. When a dynamic class is unloaded by the JVM's
+ *       garbage collector, its associated {@code ClassValue} entry is automatically collected without
+ *       manual registry eviction.</li>
+ *   <li><b>Multi-Tenant &amp; Container Isolation:</b> In shared container environments where Ariadne
+ *       is injected into the JVM Bootstrap ClassLoader, site IDs are shared across tenants. For complete
+ *       isolation across application redeployments, containers may invoke {@link #clear()} during
+ *       {@code contextDestroyed()}.</li>
+ *   <li><b>Memory Footprint Bounding:</b> Registry size is strictly capped at {@code ariadne.registry.max_sites}
+ *       (default: 65,536). In extreme scenarios where applications dynamically generate millions of
+ *       unique script classes in an infinite loop, registration gracefully degrades rather than
+ *       exhausting JVM heap memory.</li>
+ * </ul>
  */
 public final class SiteRegistry {
 
+    private static final int MAX_SITES = Integer.getInteger("ariadne.registry.max_sites", 65_536);
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(1);
     private static final AtomicLong DISPATCH_COUNTER = new AtomicLong();
     private static final Map<Integer, CallSiteMetadata> BY_ID = new ConcurrentHashMap<>();
@@ -41,6 +62,10 @@ public final class SiteRegistry {
     /**
      * Registers call site metadata and returns a unique, deterministic siteId.
      * If the metadata has been seen before, returns the existing siteId.
+     * <p>
+     * Memory Bounds: The registry is bounded by {@code ariadne.registry.max_sites} (default: 65,536).
+     * If this threshold is reached, new distinct call sites gracefully fallback to ID 0 rather
+     * than allowing unbounded heap growth.
      */
     public static int register(CallSiteMetadata metadata) {
         if (metadata == null) {
@@ -50,6 +75,10 @@ public final class SiteRegistry {
         if (existing != null) {
             metadata.setSiteId(existing);
             return existing;
+        }
+
+        if (BY_ID.size() >= MAX_SITES) {
+            return 0;
         }
 
         int newId = ID_GENERATOR.getAndIncrement();

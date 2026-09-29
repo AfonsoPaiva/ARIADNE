@@ -50,13 +50,16 @@ public final class BootstrapInjector {
             return;
         }
 
-        // Check if already on bootstrap path (e.g. when run with -javaagent jar)
+        // Check if already present on the bootstrap search path (e.g. injected previously,
+        // or explicitly appended via -Xbootclasspath/a:). Note: running with -javaagent loads
+        // the agent onto the system/app class loader, so dynamic bootstrap injection is always
+        // required on first run to ensure core classes are visible to java.base (null class loader).
         try {
             Class.forName("io.ariadne.core.Link", false, null);
             INJECTED = true;
             return;
         } catch (ClassNotFoundException ignored) {
-            // Needs dynamic bootstrap injection (e.g. during test runs or unpacked agent execution)
+            // Proceed with dynamic bootstrap injection via appendToBootstrapClassLoaderSearch
         }
 
         try {

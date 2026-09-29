@@ -1539,23 +1539,23 @@
 <span class="code-comment"># Zero code modifications required.</span>
 <span class="code-comment"># Automatically instruments ThreadPoolExecutor, CompletableFuture,</span>
 <span class="code-comment"># ForkJoinPool, Virtual Threads, Reactor, and RxJava.</span>`,
-      maven: `<span class="code-comment">&lt;!-- Direct programmatic integration in pom.xml --&gt;</span>
+      maven: `<span class="code-comment">&lt;!-- Maven Central coordinate in pom.xml --&gt;</span>
 &lt;<span class="code-keyword">dependency</span>&gt;
-    &lt;<span class="code-type">groupId</span>&gt;io.ariadne&lt;/<span class="code-type">groupId</span>&gt;
+    &lt;<span class="code-type">groupId</span>&gt;io.github.afonsopaiva&lt;/<span class="code-type">groupId</span>&gt;
     &lt;<span class="code-type">artifactId</span>&gt;ariadne-core&lt;/<span class="code-type">artifactId</span>&gt;
     &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-alpha.2</span>&lt;/<span class="code-type">version</span>&gt;
 &lt;/<span class="code-keyword">dependency</span>&gt;
 
 <span class="code-comment">&lt;!-- Optional SLF4J MDC context propagation adapter --&gt;</span>
 &lt;<span class="code-keyword">dependency</span>&gt;
-    &lt;<span class="code-type">groupId</span>&gt;io.ariadne&lt;/<span class="code-type">groupId</span>&gt;
+    &lt;<span class="code-type">groupId</span>&gt;io.github.afonsopaiva&lt;/<span class="code-type">groupId</span>&gt;
     &lt;<span class="code-type">artifactId</span>&gt;ariadne-adapter-mdc&lt;/<span class="code-type">artifactId</span>&gt;
     &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-alpha.2</span>&lt;/<span class="code-type">version</span>&gt;
 &lt;/<span class="code-keyword">dependency</span>&gt;`,
       gradle: `<span class="code-comment">// build.gradle.kts</span>
 dependencies {
-    <span class="code-keyword">implementation</span>(<span class="code-string">"io.ariadne:ariadne-core:0.1.0-alpha.2"</span>)
-    <span class="code-keyword">implementation</span>(<span class="code-string">"io.ariadne:ariadne-adapter-mdc:0.1.0-alpha.2"</span>)
+    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-core:0.1.0-alpha.2"</span>)
+    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-alpha.2"</span>)
 }`
     };
 

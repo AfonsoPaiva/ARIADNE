@@ -104,16 +104,18 @@ The agent automatically instruments:
 
 ### 2. Programmatic Integration (Maven / Gradle)
 
+Ariadne is configured for publication to **Maven Central** under the verified namespace `io.github.afonsopaiva`:
+
 **Maven:**
 ```xml
 <dependency>
-    <groupId>io.ariadne</groupId>
+    <groupId>io.github.afonsopaiva</groupId>
     <artifactId>ariadne-core</artifactId>
     <version>0.1.0-alpha.2</version>
 </dependency>
 <!-- Optional SLF4J MDC adapter -->
 <dependency>
-    <groupId>io.ariadne</groupId>
+    <groupId>io.github.afonsopaiva</groupId>
     <artifactId>ariadne-adapter-mdc</artifactId>
     <version>0.1.0-alpha.2</version>
 </dependency>
@@ -122,10 +124,12 @@ The agent automatically instruments:
 **Gradle:**
 ```kotlin
 dependencies {
-    implementation("io.ariadne:ariadne-core:0.1.0-alpha.2")
-    implementation("io.ariadne:ariadne-adapter-mdc:0.1.0-alpha.2")
+    implementation("io.github.afonsopaiva:ariadne-core:0.1.0-alpha.2")
+    implementation("io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-alpha.2")
 }
 ```
+
+*Pre-built Java Agent JARs are also directly downloadable from [GitHub Releases](https://github.com/AfonsoPaiva/ARIADNE/releases).*
 
 ---
 
@@ -255,9 +259,18 @@ mvn test-compile
 
 ---
 
+## Project Documentation & Hygiene
+
+- 📋 **[Compatibility Matrix](COMPATIBILITY.md)** — Verified JDKs (Java 21, 23), Project Reactor, RxJava, and Spring Boot versions.
+- 📦 **[Changelog](CHANGELOG.md)** — Full release history following Keep a Changelog and Semantic Versioning.
+- 🤝 **[Contributing Guidelines](CONTRIBUTING.md)** — Development environment setup, quality checks, and architectural invariants.
+- 🛡️ **[Security Policy](SECURITY.md)** — Vulnerability reporting instructions, fail-safe rules, and data leak prevention.
+
+---
+
 ## Technical Documentation & Wiki
 
-For complete architectural deep-dives, JMX MBean monitoring (`io.ariadne:type=AriadneManager`), bytecode transformation internals, Canary Probes, and configuration reference, visit the:
+For complete architectural deep-dives, JMX MBean monitoring (`io.ariadne:type=Ariadne`), bytecode transformation internals, Canary Probes, and configuration reference, visit the:
 
 👉 **[Ariadne Technical Wiki & Reference Manual](https://afonsopaiva.github.io/ARIADNE/wiki.html)**
 

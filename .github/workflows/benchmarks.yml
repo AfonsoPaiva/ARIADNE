@@ -15,18 +15,25 @@ on:
         description: 'JVM Forks'
         required: false
         default: '3'
+  pull_request:
+    paths:
+      - 'ariadne-core/**'
+      - 'ariadne-agent/**'
+      - 'ariadne-benchmarks/**'
 
 permissions:
   contents: read
 
 jobs:
   benchmark:
-    name: Run JMH Microbenchmarks
+    name: Run JMH Microbenchmarks & Compare vs Main
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -35,10 +42,10 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build Benchmarks JAR
+      - name: Build Benchmarks JAR (Current Branch)
         run: mvn -B clean package -DskipTests -pl ariadne-benchmarks -am
 
-      - name: Execute JMH Benchmarks
+      - name: Execute JMH Benchmarks (Current Branch)
         run: |
           java -jar ariadne-benchmarks/target/benchmarks.jar \
             -rf json \
@@ -48,13 +55,38 @@ jobs:
             -i ${{ github.event.inputs.measurement_iterations || '5' }} -r 1s \
             -f ${{ github.event.inputs.forks || '3' }}
 
-      - name: Publish Benchmark Step Summary
+      - name: Attempt Baseline Retrieval from main
+        id: main_baseline
+        run: |
+          git checkout origin/main || git checkout main || true
+          if [ -f "benchmark-results.json" ]; then
+            cp benchmark-results.json benchmark-baseline-main.json
+            echo "has_baseline=true" >> $GITHUB_OUTPUT
+          else
+            echo "Building main baseline..."
+            mvn -B clean package -DskipTests -pl ariadne-benchmarks -am || true
+            if [ -f "ariadne-benchmarks/target/benchmarks.jar" ]; then
+              java -jar ariadne-benchmarks/target/benchmarks.jar \
+                -rf json \
+                -rff benchmark-baseline-main.json \
+                -prof gc \
+                -wi 2 -w 1s -i 2 -r 1s -f 1 || true
+              echo "has_baseline=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+          # Return to current checkout
+          git checkout - || true
+
+      - name: Generate Benchmark Comparison Report vs Main
         if: always()
         run: |
-          python3 scripts/format_benchmark_summary.py benchmark-results.json >> $GITHUB_STEP_SUMMARY
+          python3 scripts/compare_benchmarks.py benchmark-results.json benchmark-baseline-main.json >> $GITHUB_STEP_SUMMARY || \
+          python3 scripts/generate_benchmark_tables.py benchmark-results.json --format md >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload Raw Results JSON Artifact
+      - name: Upload Raw Results Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jmh-benchmark-results
-          path: benchmark-results.json
+          path: |
+            benchmark-results.json
+            benchmark-baseline-main.json

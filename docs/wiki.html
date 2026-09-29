@@ -999,10 +999,16 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
             Para instrumentar o código de forma transparente sem poluir APIs corporativas, o Ariadne utiliza componentes estáticos de escopo global. É indispensável compreender o modelo de concorrência e as limitações inerentes a esse design:
           </p>
           <div class="wiki-callout info">
-            <h4>1. Registro Global de Call Sites (<code>SiteRegistry</code>)</h4>
+            <h4>1. Registro Global de Call Sites (<code>SiteRegistry</code>) e Segurança de ClassLoader</h4>
             <p>
-              O <code>SiteRegistry</code> armazena metadados de pontos de chamada em mapas concorrentes estáticos (<code>ConcurrentHashMap</code>). Em sistemas convencionais (Spring Boot, Micronaut, Quarkus), o total de pontos de chamada instrumentados é finito e restrito (dezenas a centenas de locais). No entanto, caso uma aplicação gere classes ou scripts dinamicamente em loop infinito sem limites, os metadados residirão em memória. Para evitar vazamentos em ambientes dinâmicos ou testes unitários, o Ariadne fornece métodos explícitos de gerenciamento: <code>SiteRegistry.clear()</code> e <code>SiteRegistry.size()</code>.
+              O <code>SiteRegistry</code> armazena metadados de pontos de chamada em mapas concorrentes estáticos (<code>ConcurrentHashMap</code>). Para assegurar imunidade contra vazamentos de memória (<em>ClassLoader leaks</em>) em servidores de aplicação (Tomcat, Jetty, WebLogic):
             </p>
+            <ul>
+              <li><strong>Desacoplamento de ClassLoader:</strong> A classe <code>CallSiteMetadata</code> armazena estritamente tipos primitivos e instâncias de <code>String</code>. Não mantém qualquer referência forte ou fraca a instâncias de <code>Class&lt;?&gt;</code> ou <code>ClassLoader</code>. O descarregamento de um WAR/EAR nunca é bloqueado pelo registro.</li>
+              <li><strong>Coleta Automática via ClassValue:</strong> O cache <code>ClassValue&lt;Integer&gt;</code> aloca o ID diretamente na estrutura interna da classe alvo. Quando uma classe dinâmica ou lambda é coletada pelo Garbage Collector da JVM, sua entrada é purgada automaticamente sem intervenção.</li>
+              <li><strong>Proteção contra Sobrecarga de Heap (Bounded Capacity):</strong> O registro é delimitado por <code>-Dariadne.registry.max_sites</code> (padrão: <strong>65.536</strong>). Caso código dinâmico gere scripts ilimitados em loop, o registro degrada suavemente para ID genérico em vez de permitir crescimento irrestrito de heap.</li>
+              <li><strong>Gestão Explícita de Ciclo de Vida:</strong> Disponibiliza <code>SiteRegistry.clear()</code> e <code>SiteRegistry.size()</code> para invocação em <code>ServletContextListener.contextDestroyed()</code> ou testes unitários.</li>
+            </ul>
           </div>
           <div class="wiki-callout info">
             <h4>2. Isolamento de Threads e Prevenção de Context Leaks (<code>ThreadLocalContextCarrier</code>)</h4>
@@ -1011,9 +1017,12 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
             </p>
           </div>
           <div class="wiki-callout info">
-            <h4>3. Injeção no Bootstrap ClassLoader</h4>
+            <h4>3. Injeção no Bootstrap ClassLoader &amp; Ambientes Multi-Tenant</h4>
             <p>
-              Para que classes do núcleo (<code>java.base</code>) possam invocar o motor de causalidade sem erros de ligação de módulos, o agente injeta o JAR do núcleo no Bootstrap ClassLoader. Em arquiteturas modulares ou com recarga a quente de classes (como servidores OSGi ou contêineres EAR legados), as classes injetadas no bootstrap persistem durante todo o ciclo de vida da JVM.
+              Para que classes do núcleo do JDK (<code>java.base</code>, como <code>CompletableFuture</code> e <code>ThreadPoolExecutor</code>) possam invocar o motor de causalidade sem erros de ligação de módulos, o agente injeta o JAR do núcleo no Bootstrap ClassLoader search path via <code>Instrumentation.appendToBootstrapClassLoaderSearch</code>.
+            </p>
+            <p>
+              <strong>Implicação para Contêineres Corporativos (EAR / WAR / OSGi):</strong> Como as classes injetadas no bootstrap residem no nível mais alto da hierarquia de carregamento da JVM, seu estado estático é compartilhado entre todas as aplicações hospedadas na mesma JVM. Em servidores multi-tenant onde múltiplos WARs compartilham a mesma instância de JVM, as causas assíncronas são segregadas por thread/link individual, mas o registro de metadados é compartilhado a nível global.
             </p>
           </div>
           <div class="wiki-callout info">
@@ -1040,7 +1049,7 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
 
           <h3>Option B: Programmatic Maven Dependency</h3>
           <pre><code>&lt;dependency&gt;
-    &lt;groupId&gt;io.ariadne&lt;/groupId&gt;
+    &lt;groupId&gt;io.github.afonsopaiva&lt;/groupId&gt;
     &lt;artifactId&gt;ariadne-core&lt;/artifactId&gt;
     &lt;version&gt;0.1.0-alpha.2&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>

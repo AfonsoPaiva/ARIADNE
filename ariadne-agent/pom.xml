@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.ariadne</groupId>
+        <groupId>io.github.afonsopaiva</groupId>
         <artifactId>ariadne-parent</artifactId>
         <version>0.1.0-alpha.2</version>
     </parent>
@@ -18,21 +18,21 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-reactor</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-rxjava</artifactId>
             <optional>true</optional>
         </dependency>
         <dependency>
-            <groupId>io.ariadne</groupId>
+            <groupId>io.github.afonsopaiva</groupId>
             <artifactId>ariadne-adapter-mdc</artifactId>
             <optional>true</optional>
         </dependency>
@@ -94,7 +94,7 @@
                             <shadedArtifactAttached>false</shadedArtifactAttached>
                             <artifactSet>
                                 <includes>
-                                    <include>io.ariadne:*</include>
+                                    <include>io.github.afonsopaiva:*</include>
                                     <include>net.bytebuddy:byte-buddy</include>
                                 </includes>
                                 <excludes>
