@@ -45,6 +45,24 @@ public final class SiteRegistry {
     }
 
     /**
+     * Fast-path registration for call sites known statically (e.g. agent advice, reactive scheduler hooks).
+     * Avoids StackWalker overhead entirely — cost is one ConcurrentHashMap lookup (~5 ns) after first call.
+     *
+     * @param description Static description of the instrumented call site
+     * @return Deterministic siteId for this description
+     */
+    public static int getOrRegister(String description) {
+        CallSiteMetadata metadata = new CallSiteMetadata(
+                "io.ariadne.agent", description, null, -1, description
+        );
+        Integer existing = BY_METADATA.get(metadata);
+        if (existing != null) {
+            return existing;
+        }
+        return register(metadata);
+    }
+
+    /**
      * Resolves metadata for the given siteId. Returns null if not found.
      */
     public static CallSiteMetadata get(int siteId) {

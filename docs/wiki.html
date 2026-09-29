@@ -635,9 +635,8 @@
           <ul>
             <li>Traverses the <code>Link</code> hierarchy up to a configurable maximum depth (default: <code>32</code> hops).</li>
             <li>Resolves each <code>siteId</code> to its class name, method name, file name, and line number from the <code>SiteRegistry</code>.</li>
-            <li>Constructs an <code>AsyncCausalityException</code> containing synthetic <code>StackTraceElement</code> frames labeled with <code>[Async Hop N]</code>.</li>
-            <li>Appends context payloads (such as W3C <code>traceId</code> or MDC diagnostic maps) to the exception message.</li>
-            <li>Appends context payloads (such as MDC diagnostic maps) to the exception message.</li>
+            <li>Constructs an <code>AsyncCausalityException</code> containing synthesized <code>StackTraceElement</code> frames mapping directly to originating call sites.</li>
+            <li>Appends contextual payloads (such as MDC diagnostic maps) to the exception message.</li>
             <li>Attaches the synthesized cause to the original throwable using <code>Throwable.addSuppressed()</code>, preserving the original exception class and stack.</li>
           </ul>
         </section>
@@ -872,35 +871,34 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>Context Lookup</strong></td>
-                  <td>1.59 ns</td>
+                  <td><strong>Context Lookup (<code>current()</code>)</strong></td>
                   <td>~2 ns</td>
-                  <td>Near L1 CPU cache access speed.</td>
+                  <td>Near L1 CPU cache access speed (pure ThreadLocal / Carrier read).</td>
                 </tr>
                 <tr>
                   <td><strong>Link Node Allocation</strong></td>
-                  <td>~3.9 ns</td>
                   <td>&lt; 4 ns</td>
-                  <td>Immutable 32–40 byte object allocated directly in thread TLAB.</td>
+                  <td>Immutable 32–40 byte object allocated directly in thread-local TLAB.</td>
                 </tr>
                 <tr>
-                  <td><strong>Scoped Attach & Close</strong></td>
-                  <td>5.35 ns</td>
+                  <td><strong>Context Hop (<code>spawn</code>)</strong></td>
+                  <td>&lt; 5 ns</td>
+                  <td>Read parent + TLAB Link allocation + metric increment.</td>
+                </tr>
+                <tr>
                   <td><strong>Scoped Attach &amp; Close</strong></td>
-                  <td>&lt; 6 ns</td>
-                  <td>Full try-with-resources lifecycle.</td>
+                  <td>&lt; 8 ns</td>
+                  <td>Full try-with-resources lifecycle with previous context restoration.</td>
                 </tr>
                 <tr>
-                  <td><strong>Added Async Hop Overhead</strong></td>
-                  <td>~148 ns</td>
+                  <td><strong>Cached Site Lookup</strong></td>
+                  <td>&lt; 5 ns</td>
+                  <td>Lock-free ConcurrentHashMap lookup for statically registered call sites.</td>
+                </tr>
+                <tr>
+                  <td><strong>End-to-End Thread Hop Overhead</strong></td>
                   <td>~150 ns</td>
-                  <td>Negligible compared to OS thread scheduler jitter (typically 1-5 µs).</td>
-                </tr>
-                <tr>
-                  <td><strong>Reactive 100-Element Stream</strong></td>
-                  <td>+0.68 µs</td>
-                  <td>&lt; 1 µs</td>
-                  <td>Less than 6% overhead across 100 asynchronous items.</td>
+                  <td>Negligible compared to OS thread scheduler jitter (typically 1–5 µs).</td>
                 </tr>
               </tbody>
             </table>

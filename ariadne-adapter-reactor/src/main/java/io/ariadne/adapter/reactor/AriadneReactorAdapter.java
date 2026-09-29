@@ -54,9 +54,9 @@ public final class AriadneReactorAdapter {
         verifyCompatibility();
 
         // 1. Thread boundary propagation hook
+        final int reactorSiteId = SiteRegistry.getOrRegister("Reactor Scheduler Dispatch");
         Schedulers.onScheduleHook(HOOK_KEY, runnable -> {
-            int siteId = SiteRegistry.captureCallerSiteId(0, "Reactor Scheduler Dispatch");
-            Link hop = AriadneContext.spawn(siteId);
+            Link hop = AriadneContext.spawn(reactorSiteId);
             return AriadneRunnable.wrap(runnable, hop);
         });
 

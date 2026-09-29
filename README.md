@@ -44,10 +44,9 @@ java.lang.NullPointerException: Cannot invoke "Account.balance()"
 java.lang.NullPointerException: Cannot invoke "Account.balance()"
     at com.app.billing.InvoiceWorker.process(InvoiceWorker.java:42)
     at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(...)
-    Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous causality trace
-        at [Async Hop 2] com.app.billing.BillingService.chargeCustomer(BillingService.java:114)
-        at [Async Hop 1] com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)
-        [Context: MDC={orderId=order_123, tenant=acme}]
+    Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous execution path (2 hops) [Context: {orderId=order_123, tenant=acme}]
+        at com.app.billing.BillingService.chargeCustomer(BillingService.java:114)
+        at com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)
 ```
 
 ### Why Ariadne is Designed for Production Safety
@@ -55,8 +54,8 @@ java.lang.NullPointerException: Cannot invoke "Account.balance()"
 Traditional diagnostic tools capture full JVM stack traces (`new Throwable()`) on **every single task dispatch or operator creation**, devouring CPU cycles and causing severe GC pressure (often 10×–100× throughput degradation).
 
 Ariadne uses **lazy backward pointer traversal**:
-1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 32-byte pointer (`Link`) in thread-local TLAB memory. Instead of capturing full Throwables, it executes a shallow `StackWalker` check (capturing only the immediate caller frame) and interns the call-site in a lock-free registry (`SiteRegistry`), amortizing the hop cost to **~150 ns**.
-2. **Memory retention protection:** Chains are capped at a configurable depth (`ariadne.max.depth`, default: 32) at spawn time, preventing memory leaks on recursive or repeating tasks (e.g. `ScheduledExecutorService` or reactive loops).
+1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 32–40 byte record (`Link`) in thread-local TLAB memory. Call sites are statically cached in a lock-free registry (`SiteRegistry`) during agent instrumentation (avoiding `StackWalker` overhead on hot dispatch paths), amortizing the hop cost to **~150 ns**.
+2. **Memory retention protection:** Chains are capped at a configurable depth (`ariadne.max.depth`, default: 32) using a sliding window strategy at spawn time, pruning the oldest hops to allow garbage collection while preserving recent causal context on long-lived, repeating, or recursive tasks.
 3. **On failure only (exceptions):** Ariadne traverses the pointer chain backwards, synthesizes the causal stack frames, and attaches them directly via `Throwable.addSuppressed()`.
 
 ---
@@ -83,12 +82,12 @@ java -javaagent:ariadne-agent-0.1.0-alpha.2.jar -jar your-application.jar
 ```
 
 The agent automatically instruments:
-- `java.util.concurrent.Executor` & `ExecutorService`
-- `java.util.concurrent.CompletableFuture`
-- `java.util.concurrent.ForkJoinPool`
-- Java 21 Virtual Threads (`Thread.ofVirtual()`)
-- Project Reactor & RxJava 3 pipelines
-- SLF4J MDC context propagation
+- `java.util.concurrent.Executor` & `ExecutorService` (including ThreadPoolExecutor, ScheduledThreadPoolExecutor)
+- `java.util.concurrent.CompletableFuture` (`supplyAsync`, `runAsync`, `then*Async`, `handleAsync`, `whenCompleteAsync`)
+- `java.util.concurrent.ForkJoinPool` (via `ExecutorService.execute(Runnable)` / `submit`)
+- Java 21 Virtual Threads (via `Executors.newVirtualThreadPerTaskExecutor()`)
+- Project Reactor & RxJava 3 schedulers and error hooks
+- SLF4J MDC context propagation (automatic snapshotting across boundaries)
 
 ### 2. Programmatic Integration (Maven / Gradle)
 
@@ -119,15 +118,16 @@ dependencies {
 
 ## Performance Summary (JMH 1.37 / Java 21)
 
-| Operation | Typical Latency | Impact |
+| Operation | Isolated Latency | Memory Impact |
 | :--- | :---: | :--- |
-| **Context Read** | **~2 ns** | Near CPU L1 cache speed |
-| **Direct Link Creation** | **&lt; 4 ns** | Immutable 32–40 byte record allocation (TLAB) |
-| **Context Hop (`spawn`)** | **&lt; 5 ns** | Read parent + allocate link + thread update |
-| **Overhead per Async Hop** | **~150 ns** | Imperceptible vs. OS scheduler jitter (1–5 µs) |
-| **Reactive Stream (100 elements)** | **&lt; 1 µs** | Less than 6% overhead across 100 items |
+| **Context Read (`current()`)** | **~2 ns** | 0 B (ThreadLocal read) |
+| **Direct Link Allocation** | **&lt; 4 ns** | 32–40 B (TLAB allocation) |
+| **Context Hop (`spawn`)** | **&lt; 5 ns** | 32–40 B (TLAB link + metric) |
+| **Scoped Attach / Restore** | **&lt; 8 ns** | 0 B (try-with-resources handle) |
+| **Cached Site Lookup** | **&lt; 5 ns** | 0 B (ConcurrentHashMap read) |
+| **End-to-End Thread Hop** | **~150 ns overhead** | 32–40 B per hop (excluding JDK task objects) |
 
-> 📊 **Reproducible Methodology:** Benchmarks are run via our automated [JMH Benchmark Workflow](.github/workflows/benchmarks.yml) (OpenJDK 21 HotSpot, `-prof gc`). Each release publishes the raw `benchmark-results.json` containing latency percentiles, error margins, and per-op allocation metrics. For technical details, see the [Technical Wiki](docs/wiki.html#benchmarks).
+> 📊 **Reproducible Methodology & Rigor:** Isolated operations are measured in nanoseconds via `CoreOperationsBenchmark` to eliminate OS thread-scheduling noise (where context-switch jitter of 1–5 µs dominates raw latency). End-to-end multi-threaded benchmarks are run via our automated [JMH Benchmark Workflow](.github/workflows/benchmarks.yml) (OpenJDK 21 HotSpot, 5 warmups, 5 measurement iterations, 3 forks, `-prof gc`). Each release publishes the raw `benchmark-results.json` containing percentiles, error margins, and GC allocation rates. Starting in `v0.1.0-alpha.2`, call sites are statically cached (`getOrRegister`) across both agent advice and reactive scheduler hooks, eliminating all runtime `StackWalker` overhead on hot dispatch paths. For technical details, see the [Technical Wiki](docs/wiki.html#benchmarks).
 
 ---
 

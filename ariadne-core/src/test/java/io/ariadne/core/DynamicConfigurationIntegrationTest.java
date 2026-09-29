@@ -9,7 +9,7 @@ class DynamicConfigurationIntegrationTest {
 
     @BeforeEach
     @AfterEach
-    void resetAll() {
+    public void resetAll() {
         AriadneConfig.resetDefaults();
         AriadneMetrics.reset();
         AriadneContext.clear();
@@ -56,7 +56,7 @@ class DynamicConfigurationIntegrationTest {
         assertThat(AriadneMetrics.getHopsSpawned()).isEqualTo(0);
         assertThat(AriadneMetrics.getReconstructionsTotal()).isEqualTo(0);
 
-        Link link1 = AriadneContext.spawn(101);
+        AriadneContext.spawn(101);
         Link link2 = AriadneContext.spawn(102);
 
         assertThat(AriadneMetrics.getHopsSpawned()).isEqualTo(2);

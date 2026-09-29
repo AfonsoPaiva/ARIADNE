@@ -19,11 +19,11 @@ public final class AriadneBenchmarkRunner {
     public static void main(String[] args) throws RunnerException {
         Options opt = new OptionsBuilder()
                 .include("io.ariadne.benchmark.*")
-                .warmupIterations(3)
+                .warmupIterations(5)
                 .warmupTime(org.openjdk.jmh.runner.options.TimeValue.seconds(1))
                 .measurementIterations(5)
                 .measurementTime(org.openjdk.jmh.runner.options.TimeValue.seconds(1))
-                .forks(1)
+                .forks(3)
                 .build();
 
         new Runner(opt).run();

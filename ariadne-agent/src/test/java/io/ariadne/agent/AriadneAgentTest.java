@@ -144,4 +144,60 @@ class AriadneAgentTest {
             pool.shutdownNow();
         }
     }
+
+    @Test
+    void shouldNotDoubleWrapWhenExecutorServiceSubmitDelegatesToExecute() throws Exception {
+        Class<?> metricsClass = Class.forName("io.ariadne.core.AriadneMetrics", true, null);
+        metricsClass.getMethod("reset").invoke(null);
+
+        ExecutorService pool = Executors.newFixedThreadPool(1);
+        try {
+            // submit(Callable) -> AbstractExecutorService delegates to execute(FutureTask)
+            Future<String> callableFuture = pool.submit(() -> "success-callable");
+            assertThat(callableFuture.get()).isEqualTo("success-callable");
+
+            long hopsAfterCallable = (long) metricsClass.getMethod("getHopsSpawned").invoke(null);
+            // Exactly 1 hop should be recorded for submit(Callable), NOT 2 from execute(FutureTask)
+            assertThat(hopsAfterCallable).as("submit(Callable) must not double-wrap on execute").isEqualTo(1);
+
+            // submit(Runnable) -> AbstractExecutorService delegates to execute(FutureTask)
+            Future<?> runnableFuture = pool.submit(() -> {});
+            runnableFuture.get();
+
+            long hopsAfterRunnable = (long) metricsClass.getMethod("getHopsSpawned").invoke(null);
+            // Exactly 1 additional hop for submit(Runnable)
+            assertThat(hopsAfterRunnable).as("submit(Runnable) must not double-wrap on execute").isEqualTo(2);
+
+            // Direct execute(Runnable)
+            pool.execute(() -> {});
+            Thread.sleep(50);
+
+            long hopsAfterExecute = (long) metricsClass.getMethod("getHopsSpawned").invoke(null);
+            assertThat(hopsAfterExecute).as("direct execute(Runnable) must record exactly 1 hop").isEqualTo(3);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void shouldPropagateCausalityAcrossVirtualThreadPerTaskExecutor() throws Exception {
+        setContext(2001);
+
+        try (ExecutorService virtualPool = Executors.newVirtualThreadPerTaskExecutor()) {
+            Future<String> future = virtualPool.submit(() -> {
+                throw new IllegalStateException("Crash in Virtual Thread Task");
+            });
+
+            assertThatThrownBy(future::get)
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .satisfies(ex -> {
+                        Throwable cause = ex.getCause();
+                        Throwable[] suppressed = cause.getSuppressed();
+                        assertThat(suppressed)
+                                .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
+                                        && t.getMessage().contains("hops"));
+                    });
+        }
+    }
 }

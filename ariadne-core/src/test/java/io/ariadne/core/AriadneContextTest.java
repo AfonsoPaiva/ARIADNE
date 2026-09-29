@@ -116,10 +116,18 @@ class AriadneContextTest {
         assertThat(current.depth()).isEqualTo(maxDepth);
         long initialCapped = AriadneMetrics.getHopsCapped();
 
-        // The next spawn must truncate parent to prevent unbounded chain retention
+        // The next spawn must prune oldest hops (sliding window) to prevent unbounded chain retention
         Link cappedChild = AriadneContext.spawn(999);
-        assertThat(cappedChild.parent).isNull();
-        assertThat(cappedChild.depth()).isEqualTo(1);
+        int expectedRetainedDepth = (maxDepth / 2) + 1; // 16 retained ancestors + 1 new child = 17
+        assertThat(cappedChild.parent).isNotNull();
+        assertThat(cappedChild.depth()).isEqualTo(expectedRetainedDepth);
         assertThat(AriadneMetrics.getHopsCapped()).isEqualTo(initialCapped + 1);
+
+        // Verify the oldest ancestor in the retained chain has parent == null
+        Link ancestor = cappedChild;
+        while (ancestor.parent != null) {
+            ancestor = ancestor.parent;
+        }
+        assertThat(ancestor.depth()).isEqualTo(1);
     }
 }

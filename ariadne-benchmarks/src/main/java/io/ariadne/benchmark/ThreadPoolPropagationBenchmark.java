@@ -1,13 +1,27 @@
 package io.ariadne.benchmark;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
+import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.annotations.Warmup;
+
 import io.ariadne.core.AriadneCallable;
 import io.ariadne.core.AriadneContext;
 import io.ariadne.core.AriadneFunction;
 import io.ariadne.core.AriadneSupplier;
 import io.ariadne.core.Link;
-import org.openjdk.jmh.annotations.*;
-
-import java.util.concurrent.*;
 
 /**
  * Microbenchmark measuring the overhead of wrapping and propagating causality
@@ -15,9 +29,9 @@ import java.util.concurrent.*;
  */
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
-@Warmup(iterations = 3, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
-@Fork(1)
+@Fork(3)
 @State(Scope.Benchmark)
 public class ThreadPoolPropagationBenchmark {
 

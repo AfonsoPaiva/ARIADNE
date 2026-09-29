@@ -1,12 +1,13 @@
 package io.ariadne.adapter.mdc;
 
+import java.util.Map;
+import java.util.Objects;
+
+import org.slf4j.MDC;
+
 import io.ariadne.core.AriadneConfig;
 import io.ariadne.core.ContextCarrier;
 import io.ariadne.core.Link;
-import org.slf4j.MDC;
-
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * ContextCarrier decorator that captures SLF4J {@link MDC} snapshots upon {@link #spawn(int)}
@@ -45,7 +46,6 @@ public final class AriadneMdcCarrier implements ContextCarrier {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Link spawn(int siteId, Object attachment) {
         Object payload = attachment;
         if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {

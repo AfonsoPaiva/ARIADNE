@@ -1,22 +1,21 @@
 package io.ariadne.adapter.mdc;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.MDC;
+
 import io.ariadne.core.AriadneConfig;
 import io.ariadne.core.AriadneContext;
 import io.ariadne.core.AriadneManagement;
 import io.ariadne.core.AriadneMetrics;
 import io.ariadne.core.CanaryProbeResult;
 import io.ariadne.core.ContextCarrier;
-import org.slf4j.MDC;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Adapter integrating Ariadne with SLF4J {@link MDC} (Mapped Diagnostic Context).
@@ -59,63 +58,61 @@ public final class AriadneMdcAdapter {
                 Object proxy = Proxy.newProxyInstance(
                         null,
                         new Class<?>[]{ bootCarrierType },
-                        new InvocationHandler() {
-                            @Override
-                            @SuppressWarnings("unchecked")
-                            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-                                String name = method.getName();
-                                if ("spawn".equals(name)) {
-                                    if (args != null && args.length == 1) {
-                                        int siteId = (int) args[0];
-                                        Map<String, String> mdc = AriadneConfig.isMdcPropagationEnabled()
-                                                ? MDC.getCopyOfContextMap() : null;
-                                        Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
-                                        return spawnWithAttach.invoke(bootCarrier, siteId, (mdc != null && !mdc.isEmpty()) ? mdc : null);
-                                    } else {
-                                        return method.invoke(bootCarrier, args);
-                                    }
-                                } else if ("attach".equals(name)) {
-                                    Object linkObj = (args != null && args.length > 0) ? args[0] : null;
-                                    Object delegateScope = method.invoke(bootCarrier, args);
-                                    if (!AriadneConfig.isMdcPropagationEnabled() || linkObj == null) {
-                                        return delegateScope;
-                                    }
-                                    Field attachField = bootLinkType.getField("attachment");
-                                    Object attachment = attachField.get(linkObj);
-                                    if (!(attachment instanceof Map<?, ?> targetMdc)) {
-                                        return delegateScope;
-                                    }
-                                    Map<String, String> previousMdc = MDC.getCopyOfContextMap();
-                                    MDC.setContextMap((Map<String, String>) targetMdc);
-
-                                    return Proxy.newProxyInstance(
-                                            null,
-                                            new Class<?>[]{ bootScopeType },
-                                            (scopeProxy, scopeMethod, scopeArgs) -> {
-                                                if ("close".equals(scopeMethod.getName())) {
-                                                    try {
-                                                        if (previousMdc == null || previousMdc.isEmpty()) {
-                                                            MDC.clear();
-                                                        } else {
-                                                            MDC.setContextMap(previousMdc);
-                                                        }
-                                                    } finally {
-                                                        bootScopeType.getMethod("close").invoke(delegateScope);
-                                                    }
-                                                    return null;
-                                                }
-                                                return scopeMethod.invoke(delegateScope, scopeArgs);
-                                            }
-                                    );
+                        (proxy1, method, args) -> {
+                            String name = method.getName();
+                            if ("spawn".equals(name)) {
+                                if (args != null && args.length == 1) {
+                                    int siteId = (int) args[0];
+                                    Map<String, String> mdc = AriadneConfig.isMdcPropagationEnabled()
+                                            ? MDC.getCopyOfContextMap() : null;
+                                    Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
+                                    return spawnWithAttach.invoke(bootCarrier, siteId, (mdc != null && !mdc.isEmpty()) ? mdc : null);
+                                } else {
+                                    return method.invoke(bootCarrier, args);
                                 }
-                                return method.invoke(bootCarrier, args);
+                            } else if ("attach".equals(name)) {
+                                Object linkObj = (args != null && args.length > 0) ? args[0] : null;
+                                Object delegateScope = method.invoke(bootCarrier, args);
+                                if (!AriadneConfig.isMdcPropagationEnabled() || linkObj == null) {
+                                    return delegateScope;
+                                }
+                                Field attachField = bootLinkType.getField("attachment");
+                                Object attachment = attachField.get(linkObj);
+                                if (!(attachment instanceof Map<?, ?> targetMdc)) {
+                                    return delegateScope;
+                                }
+                                Map<String, String> previousMdc = MDC.getCopyOfContextMap();
+                                @SuppressWarnings("unchecked")
+                                Map<String, String> typedTargetMdc = (Map<String, String>) targetMdc;
+                                MDC.setContextMap(typedTargetMdc);
+
+                                return Proxy.newProxyInstance(
+                                        null,
+                                        new Class<?>[]{ bootScopeType },
+                                        (scopeProxy, scopeMethod, scopeArgs) -> {
+                                            if ("close".equals(scopeMethod.getName())) {
+                                                try {
+                                                    if (previousMdc == null || previousMdc.isEmpty()) {
+                                                        MDC.clear();
+                                                    } else {
+                                                        MDC.setContextMap(previousMdc);
+                                                    }
+                                                } finally {
+                                                    bootScopeType.getMethod("close").invoke(delegateScope);
+                                                }
+                                                return null;
+                                            }
+                                            return scopeMethod.invoke(delegateScope, scopeArgs);
+                                        }
+                                );
                             }
+                            return method.invoke(bootCarrier, args);
                         }
                 );
 
                 bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, proxy);
             }
-        } catch (Throwable ignored) {
+        } catch (ReflectiveOperationException ignored) {
             // Not on bootstrap or reflection restricted
         }
 
@@ -151,7 +148,7 @@ public final class AriadneMdcAdapter {
                 Class<?> bootContext = Class.forName("io.ariadne.core.AriadneContext", false, null);
                 Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, null);
                 bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, ORIGINAL_BOOTSTRAP_CARRIER);
-            } catch (Throwable ignored) {}
+            } catch (ReflectiveOperationException ignored) {}
             ORIGINAL_BOOTSTRAP_CARRIER = null;
         }
 
@@ -177,16 +174,11 @@ public final class AriadneMdcAdapter {
         try {
             MDC.put(testKey, testVal);
 
-            // Execute an async task to test cross-thread MDC propagation
-            CompletableFuture<String> probeFuture = CompletableFuture.supplyAsync(() -> {
-                // Must be wrapped or using AriadneContext
-                return MDC.get(testKey);
-            });
-
-            // Fallback manual test inside current thread scope
+            // Verify MDC preservation inside AriadneContext scope
             var link = AriadneContext.spawn(999999);
             String capturedInScope;
-            try (var ignored = AriadneContext.attach(link)) {
+            try (AriadneContext.Scope scope = AriadneContext.attach(link)) {
+                assert scope != null;
                 capturedInScope = MDC.get(testKey);
             }
 
@@ -195,7 +187,7 @@ public final class AriadneMdcAdapter {
             }
 
             return CanaryProbeResult.success(FRAMEWORK_NAME, "MDC propagation verified successfully");
-        } catch (Throwable t) {
+        } catch (Exception t) {
             return CanaryProbeResult.failure(FRAMEWORK_NAME, "Canary probe threw unexpected exception: " + t.getMessage(), t);
         } finally {
             if (previousContext == null || previousContext.isEmpty()) {

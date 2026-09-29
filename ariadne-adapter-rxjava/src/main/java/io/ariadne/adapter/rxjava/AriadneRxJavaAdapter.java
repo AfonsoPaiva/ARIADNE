@@ -71,9 +71,9 @@ public final class AriadneRxJavaAdapter {
         // 1. Thread boundary propagation: Schedule handler
         PREV_SCHEDULE_HANDLER = RxJavaPlugins.getScheduleHandler();
         final Function<? super Runnable, ? extends Runnable> existingSchedule = PREV_SCHEDULE_HANDLER;
+        final int rxSiteId = SiteRegistry.getOrRegister("RxJava Schedule Dispatch");
         RxJavaPlugins.setScheduleHandler(runnable -> {
-            int siteId = SiteRegistry.captureCallerSiteId(0, "RxJava Schedule Dispatch");
-            Link hop = AriadneContext.spawn(siteId);
+            Link hop = AriadneContext.spawn(rxSiteId);
             Runnable ariadneWrapped = AriadneRunnable.wrap(runnable, hop);
 
             if (existingSchedule != null) {
