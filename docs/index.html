@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ariadne — Zero-Overhead JVM Asynchronous Causality Tracing</title>
+  <title>Ariadne — Sub-Microsecond JVM Asynchronous Causality Tracing</title>
   <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="Images/icon-escuro.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -974,8 +974,8 @@
             <li class="pvs-item">
               <span class="pvs-icon check">✓</span>
               <div>
-                <span class="pvs-item-title">24-Byte Causal Pointers:</span>
-                At task dispatch, Ariadne captures only an immutable reference link pointing to the caller frame. Link allocation takes 3.95 ns and consumes 24 bytes in Eden space.
+                <span class="pvs-item-title">32-Byte Causal Pointers:</span>
+                At task dispatch, Ariadne captures an immutable reference link pointing to the caller frame. Link allocation consumes 32–40 bytes in Eden space with Compressed OOPs enabled.
               </div>
             </li>
             <li class="pvs-item">
@@ -1033,7 +1033,7 @@
           </div>
           <div class="arch-arrow">→</div>
           <div class="arch-node highlight-red">
-            <div class="node-tag">24-Byte Link</div>
+            <div class="node-tag">32-Byte Link</div>
             <div class="node-title">Link #1 (Parent: null)</div>
             <div class="node-meta">3.95 ns • 0 B GC</div>
           </div>
@@ -1083,7 +1083,7 @@
         <div class="stat-node">
           <div class="stat-number">3.95 ns</div>
           <div class="stat-name">Link Allocation Cost</div>
-          <div class="stat-explain">24-byte immutable record, eligible for C2 JIT scalar replacement.</div>
+          <div class="stat-explain">32-byte immutable record, low-churn TLAB allocation without lock contention.</div>
         </div>
         <div class="stat-node">
           <div class="stat-number">~148 ns</div>
@@ -1225,7 +1225,7 @@
             <tr>
               <td><strong>v0.1.0-alpha.2</strong></td>
               <td><span class="tag-pill">Latest</span></td>
-              <td>SLF4J MDC Adapter, Java 21 Scoped Values, W3C TraceContext, OTel bridge, Kotlin Coroutines bridge.</td>
+              <td>SLF4J MDC Context Propagation Adapter, Canary Probes, JMH Benchmark Suite, and JMX MBean Observability.</td>
               <td>
                 <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.2" target="_blank" rel="noopener" class="table-link">
                   Download JARs

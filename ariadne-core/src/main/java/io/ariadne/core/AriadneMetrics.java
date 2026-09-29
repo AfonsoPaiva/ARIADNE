@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.LongAdder;
 public final class AriadneMetrics {
 
     private static final LongAdder HOPS_SPAWNED = new LongAdder();
+    private static final LongAdder HOPS_CAPPED = new LongAdder();
     private static final LongAdder RECONSTRUCTIONS_TOTAL = new LongAdder();
     private static final LongAdder RECONSTRUCTIONS_CAPPED = new LongAdder();
     private static final Map<String, CanaryProbeResult> CANARY_RESULTS = new ConcurrentHashMap<>();
@@ -24,6 +25,13 @@ public final class AriadneMetrics {
      */
     public static void recordHop() {
         HOPS_SPAWNED.increment();
+    }
+
+    /**
+     * Records an asynchronous hop where the parent was capped to prevent memory retention leaks.
+     */
+    public static void recordHopCapped() {
+        HOPS_CAPPED.increment();
     }
 
     /**
@@ -57,6 +65,13 @@ public final class AriadneMetrics {
     }
 
     /**
+     * Returns the count of causal hops where parent was capped at maxDepth.
+     */
+    public static long getHopsCapped() {
+        return HOPS_CAPPED.sum();
+    }
+
+    /**
      * Returns the total count of exceptions enriched with causal stack traces.
      */
     public static long getReconstructionsTotal() {
@@ -82,6 +97,7 @@ public final class AriadneMetrics {
      */
     public static void reset() {
         HOPS_SPAWNED.reset();
+        HOPS_CAPPED.reset();
         RECONSTRUCTIONS_TOTAL.reset();
         RECONSTRUCTIONS_CAPPED.reset();
         CANARY_RESULTS.clear();

@@ -2,7 +2,7 @@
   <img src="docs/Images/logo-vertical-dark-background.svg" alt="Ariadne Logo" width="320">
 </p>
 
-<h3 align="center">Low-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
+<h3 align="center">Zero-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
 
 <p align="center">
   <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.2"><img src="https://img.shields.io/badge/Release-v0.1.0--alpha.2-911010?style=for-the-badge" alt="Release"></a>
@@ -27,9 +27,9 @@
 
 ## What Ariadne Does
 
-In modern JVM applications, asynchronous programming models—including thread pools (`ExecutorService`), `CompletableFuture`, Project Reactor, RxJava, and Java 21 Virtual Threads—sever traditional stack traces at thread boundaries.
+In modern JVM applications, asynchronous execution boundaries—such as thread pools (`ExecutorService`), `CompletableFuture`, Project Reactor, RxJava, and Java 21 Virtual Threads—sever traditional call stacks at thread boundaries.
 
-When an exception is thrown on a worker thread, the stack trace stops at `ThreadPoolExecutor.runWorker()`. Developers are left with blind exceptions that show where the crash happened, but not **who scheduled it**, **which HTTP request triggered it**, or **what the causal chain was**.
+When an unhandled exception is thrown on a worker thread, the JVM stack trace stops at `ThreadPoolExecutor.runWorker()`. Developers are left with truncated exceptions that show where the code crashed, but not **who scheduled it**, **which controller triggered it**, or **what the asynchronous causal chain was**.
 
 ### The Problem vs. The Solution
 
@@ -47,16 +47,29 @@ java.lang.NullPointerException: Cannot invoke "Account.balance()"
     Suppressed: io.ariadne.core.AsyncCausalityException: Asynchronous causality trace
         at [Async Hop 2] com.app.billing.BillingService.chargeCustomer(BillingService.java:114)
         at [Async Hop 1] com.app.web.CheckoutController.submitOrder(CheckoutController.java:58)
-        [Context: W3CTrace[traceId=4bf92f3577b34da6, userId=usr_42, mdc={tenantId=corp_acme}]]
+        [Context: MDC={orderId=order_123, tenant=acme}]
 ```
 
-### Why Ariadne is Production-Safe
+### Why Ariadne is Designed for Production Safety
 
-Existing tools capture heavy `new Throwable()` snapshots on **every single task scheduling**, devouring CPU cycles and causing severe GC pressure (often 10×–100× throughput degradation).
+Traditional diagnostic tools capture full JVM stack traces (`new Throwable()`) on **every single task dispatch or operator creation**, devouring CPU cycles and causing severe GC pressure (often 10×–100× throughput degradation).
 
 Ariadne uses **lazy backward pointer traversal**:
-1. **On the happy path (99.9% of executions):** Ariadne records an immutable 24-byte pointer (`Link`) in single-digit nanoseconds (~148 ns per async hop).
-2. **On failure only (exceptions):** Ariadne traverses the pointer chain backwards, synthesizes the causal stack frames, and attaches them via `Throwable.addSuppressed()`.
+1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 32-byte pointer (`Link`) in thread-local TLAB memory. Instead of capturing full Throwables, it executes a shallow `StackWalker` check (capturing only the immediate caller frame) and interns the call-site in a lock-free registry (`SiteRegistry`), amortizing the hop cost to **~148 ns**.
+2. **Memory retention protection:** Chains are capped at a configurable depth (`ariadne.max.depth`, default: 32) at spawn time, preventing memory leaks on recursive or repeating tasks (e.g. `ScheduledExecutorService` or reactive loops).
+3. **On failure only (exceptions):** Ariadne traverses the pointer chain backwards, synthesizes the causal stack frames, and attaches them directly via `Throwable.addSuppressed()`.
+
+---
+
+## How Ariadne Compares to Existing Tools
+
+| Dimension | **Ariadne** | **ReactorDebugAgent (`reactor-tools`)** | **OpenTelemetry Java Agent** |
+| :--- | :---: | :---: | :---: |
+| **Primary Goal** | In-process asynchronous exception causality | Operator assembly debugging | Distributed cross-service tracing |
+| **Supported Boundaries** | Executors, Loom, CompletableFuture, Reactor, RxJava, MDC | Project Reactor exclusively | Network, HTTP, JDBC, Executors |
+| **Exception Enrichment** | Direct causal frames in `Throwable.addSuppressed()` | Reconstructed assembly in error message | Error span status in collector |
+| **Infrastructure Overhead** | Zero external dependencies; local in-memory | Zero external dependencies; Reactor only | Requires OTel Collector, Jaeger/Zipkin |
+| **Happy Path Overhead** | ~148 ns per async hop | Low (bytecode instrumentation at class load) | Variable (span creation & propagation) |
 
 ---
 
@@ -109,12 +122,12 @@ dependencies {
 | Operation | Observed Latency | Impact |
 | :--- | :---: | :--- |
 | **Context Read** | **1.6 ns** | Near CPU L1 cache speed |
-| **Direct Link Creation** | **3.9 ns** | Immutable 24-byte record allocation |
+| **Direct Link Creation** | **3.9 ns** | Immutable 32-byte record allocation (TLAB) |
 | **Context Hop (`spawn`)** | **4.5 ns** | Read parent + allocate link + thread update |
 | **Overhead per Async Hop** | **~148 ns** | Imperceptible vs. OS scheduler jitter |
 | **Reactive Stream (100 elements)** | **+0.68 µs** | Less than 6% overhead across 100 items |
 
-For comprehensive JMH graphs and methodology, see the [Technical Wiki](docs/wiki.html#benchmarks).
+For comprehensive JMH graphs, testing parameters, and methodology, see the [Technical Wiki](docs/wiki.html#benchmarks).
 
 ---
 
@@ -131,6 +144,16 @@ ARIADNE/
 ├── ariadne-integration-tests/  # End-to-end integration tests & multi-hop verification
 └── docs/                       # Interactive documentation portal & technical wiki
 ```
+
+---
+
+## Roadmap (Milestone v0.2.0)
+
+The following extensions are planned and currently under active design:
+- [ ] **W3C TraceContext Integration:** Propagation of `traceparent` headers across thread boundaries.
+- [ ] **OpenTelemetry Reflection Bridge:** Synchronizing active OTel spans with in-process causality.
+- [ ] **Java 21 Scoped Values:** Lexical scope carrier using JDK 21 `java.lang.ScopedValue`.
+- [ ] **Kotlin Coroutines Bridge:** `ThreadContextElement` adapter for Kotlin suspend/resume flows.
 
 ---
 
@@ -156,9 +179,10 @@ mvn test-compile
 
 ### Core Design Rules for Contributions
 1. **Zero External Production Dependencies in Core:** The `ariadne-core` module must remain completely free of external dependencies, relying only on the standard Java 21 runtime.
-2. **Lock-Free & Low Allocation:** Hot execution paths must use lock-free atomic primitives, immutable 24-byte link records, and avoid thread contention.
+2. **Lock-Free & Low Allocation:** Hot execution paths must use lock-free atomic primitives, immutable 32-byte link records, and avoid thread contention.
 3. **No ThreadLocal Leaks:** All context attachments must cleanly restore previous contexts upon task completion (e.g. via `try-with-resources`).
-4. **Performance Verification:** Any changes touching scheduling, context propagation, or bytecode instrumentation must be benchmarked with JMH before submission:
+4. **Memory Retention Safety:** Causal depth must be capped to prevent unbounded retention in long-lived or recursive task chains.
+5. **Performance Verification:** Any changes touching scheduling, context propagation, or bytecode instrumentation must be benchmarked with JMH before submission:
    ```bash
    mvn package -DskipTests -pl ariadne-benchmarks
    java -jar ariadne-benchmarks/target/benchmarks.jar -f 1 -wi 2 -i 5
@@ -180,7 +204,7 @@ mvn test-compile
 
 ## Technical Documentation & Wiki
 
-For complete architectural deep-dives, JMX MBean monitoring (`io.ariadne:type=AriadneManager`), bytecode transformation internals, Canary Probes, and distributed tracing bridges (W3C / OpenTelemetry / Kotlin Coroutines), visit the:
+For complete architectural deep-dives, JMX MBean monitoring (`io.ariadne:type=AriadneManager`), bytecode transformation internals, Canary Probes, and configuration reference, visit the:
 
 👉 **[Ariadne Technical Wiki & Reference Manual](https://afonsopaiva.github.io/ARIADNE/wiki.html)**
 
