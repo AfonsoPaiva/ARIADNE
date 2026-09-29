@@ -38,8 +38,13 @@ public final class AriadneCallable<V> implements Callable<V> {
         if (callable == null) {
             return null;
         }
-        if (callable instanceof AriadneCallable ac && ac.capturedLink == link) {
-            return callable;
+        if (callable instanceof AriadneCallable<?> ac) {
+            if (ac.capturedLink == link) {
+                return callable;
+            }
+            @SuppressWarnings("unchecked")
+            Callable<T> unwrapped = (Callable<T>) ac.unwrap();
+            return new AriadneCallable<>(unwrapped, link);
         }
         return new AriadneCallable<>(callable, link);
     }

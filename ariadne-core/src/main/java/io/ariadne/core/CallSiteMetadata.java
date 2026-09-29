@@ -69,7 +69,11 @@ public final class CallSiteMetadata {
 
     @Override
     public int hashCode() {
-        return Objects.hash(className, methodName, fileName, lineNumber);
+        int result = className.hashCode();
+        result = 31 * result + methodName.hashCode();
+        result = 31 * result + (fileName != null ? fileName.hashCode() : 0);
+        result = 31 * result + lineNumber;
+        return result;
     }
 
     @Override

@@ -526,7 +526,7 @@
           <li class="toc-item"><a href="#intro" class="toc-link">1. Introduction & Motivation</a></li>
           <li class="toc-item"><a href="#the-problem" class="toc-link">2. The Async Blind Spot Problem</a></li>
           <li class="toc-item"><a href="#architecture" class="toc-link">3. Core Mechanical Architecture</a></li>
-          <li class="toc-item"><a href="#link-primitive" class="toc-link">4. The Lightweight Link Node (32–40B)</a></li>
+          <li class="toc-item"><a href="#link-primitive" class="toc-link">4. The Lightweight Link Node (Exact 40B)</a></li>
           <li class="toc-item"><a href="#lazy-synthesis" class="toc-link">5. Lazy Backward Synthesis</a></li>
           <li class="toc-item"><a href="#ecosystem" class="toc-link">6. Modular Ecosystem Overview</a></li>
           <li class="toc-item"><a href="#agent" class="toc-link">7. Zero-Code Java Agent</a></li>
@@ -537,7 +537,8 @@
           <li class="toc-item"><a href="#coroutines" class="toc-link">12. <span style="font-size: 0.75rem; color: var(--accent);">[Roadmap]</span> Kotlin Coroutines Bridge</a></li>
           <li class="toc-item"><a href="#jmx-config" class="toc-link">13. Dynamic Configuration & JMX</a></li>
           <li class="toc-item"><a href="#benchmarks-detail" class="toc-link">14. Microbenchmarks & Performance</a></li>
-          <li class="toc-item"><a href="#getting-started" class="toc-link">15. Getting Started & Installation</a></li>
+          <li class="toc-item"><a href="#static-state-limitations" class="toc-link">15. Global Static State &amp; Limitations</a></li>
+          <li class="toc-item"><a href="#getting-started" class="toc-link">16. Getting Started & Installation</a></li>
         </ul>
       </aside>
 
@@ -597,8 +598,7 @@
             Ariadne resolves this dilemma by decoupling <strong>causal tracking</strong> from <strong>stack trace synthesis</strong>:
           </p>
           <ol>
-            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 32–40 byte pointer node (<code>Link</code>) in thread-local TLAB memory. Instead of capturing heavy stack traces, it executes a shallow caller check and indexes an interned registry (<code>SiteRegistry</code>). Allocation takes only <strong>~3.9 ns</strong>, amortizing async hop overhead to <strong>~148 ns</strong>.</li>
-            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a tiny immutable 32–40 byte pointer node (<code>Link</code>) in thread-local TLAB memory. Instead of capturing heavy stack traces, it executes a shallow caller check and indexes an interned registry (<code>SiteRegistry</code>). Allocation takes only <strong>&lt; 4 ns</strong>, amortizing async hop overhead to <strong>~150 ns</strong>.</li>
+            <li><strong>Scheduling Time (Happy Path):</strong> When a task is queued, Ariadne allocates a single immutable 40-byte pointer node (<code>Link</code>) in thread-local TLAB memory. Call sites are statically cached in a lock-free registry (<code>SiteRegistry</code>) with zero runtime object allocation during lookup (<code>0 B</code>).</li>
             <li><strong>Execution Time:</strong> The worker thread attaches the <code>Link</code> to its active context for the duration of the task, ensuring nested asynchronous spawns inherit their parent.</li>
             <li><strong>Failure Time (Exception Path):</strong> If an exception occurs, Ariadne walks the lightweight linked list backwards, queries the interned call-site registry, synthesizes an <code>AsyncCausalityException</code>, and attaches it via <code>Throwable.addSuppressed()</code>.</li>
           </ol>
@@ -606,7 +606,7 @@
 
         <!-- 4. Link Primitive -->
         <section class="wiki-section" id="link-primitive">
-          <h2>4. The Lightweight Link Primitive (32–40 Bytes)</h2>
+          <h2>4. The Lightweight Link Primitive (Exact 40 Bytes Footprint)</h2>
           <p>
             The foundational unit of Ariadne is the immutable <code>io.ariadne.core.Link</code> class. Its memory footprint is strictly calculated according to 64-bit JVM object layout specifications:
           </p>
@@ -619,10 +619,10 @@
 }</code></pre>
           <p>
             Under a 64-bit HotSpot JVM with Compressed OOPs enabled (<code>-XX:+UseCompressedOops</code>, default for heaps &lt; 32GB):
-            the object header occupies 12 bytes, references 4 bytes each, primitive int 4 bytes, primitive long 8 bytes. With 4 bytes of 8-byte alignment padding, the total instance footprint is <strong>40 bytes</strong> (or 32 bytes without depth). Without Compressed OOPs, it occupies <strong>48 bytes</strong>.
+            the object header occupies 12 bytes, references 4 bytes each (parent: 4, attachment: 4), primitive int 4 bytes (siteId: 4, depth: 4), primitive long 8 bytes (threadId: 8). The total field payload is 24 bytes + 12 bytes header = 36 bytes. Applying HotSpot's 8-byte object alignment padding brings the exact instance footprint to <strong>40 bytes</strong>. Without Compressed OOPs, it occupies <strong>48 bytes</strong>.
           </p>
           <p>
-            Because these nodes escape the method to cross threads, they are allocated in the thread's local TLAB (<em>Thread-Local Allocation Buffer</em>). Ariadne enforces depth capping at <code>maxDepth</code> (default: 32) at spawn time, ensuring repeating tasks (e.g. <code>ScheduledExecutorService</code>) never accumulate unbounded retained heap memory.
+            <strong>Distinção Crucial entre Link e Hop Completo:</strong> O nó de dados fundamental <code>Link</code> consome estritamente <strong>40 bytes</strong> em TLAB. Em um despacho assíncrono real via thread pool ou <code>CompletableFuture</code>, o overhead total medido é de <strong>~230 B por hop</strong>, correspondente à soma do nó <code>Link</code> (40 B) com o wrapper de execução (<code>AriadneRunnable</code> / <code>AriadneCallable</code> ~32 B) e os objetos internos de continuação do JDK. Em contrapartida, soluções tradicionais que criam um <code>Throwable</code> a cada hop geram entre 1.500 B e 4.000 B por hop.
           </p>
         </section>
 
@@ -865,49 +865,80 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
               <thead>
                 <tr>
                   <th>Benchmark Operation</th>
-                  <th>Observed Latency</th>
-                  <th>Performance Analysis</th>
+                  <th>Observed Latency / Overhead</th>
+                  <th>Memory Impact &amp; Analysis</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td><strong>Context Lookup (<code>current()</code>)</strong></td>
                   <td>~2 ns</td>
-                  <td>Near L1 CPU cache access speed (pure ThreadLocal / Carrier read).</td>
+                  <td><strong>0 B</strong> — Acesso direto via ThreadLocal carrier na velocidade de cache L1.</td>
                 </tr>
                 <tr>
                   <td><strong>Link Node Allocation</strong></td>
                   <td>&lt; 4 ns</td>
-                  <td>Immutable 32–40 byte object allocated directly in thread-local TLAB.</td>
+                  <td><strong>40 B</strong> — Pegada exata do objeto sob 64-bit JVM com Compressed OOPs.</td>
                 </tr>
                 <tr>
                   <td><strong>Context Hop (<code>spawn</code>)</strong></td>
                   <td>&lt; 5 ns</td>
-                  <td>Read parent + TLAB Link allocation + metric increment.</td>
+                  <td><strong>40 B</strong> — Alocação atômica em TLAB + verificação de profundidade.</td>
                 </tr>
                 <tr>
                   <td><strong>Scoped Attach &amp; Close</strong></td>
                   <td>&lt; 8 ns</td>
-                  <td>Full try-with-resources lifecycle with previous context restoration.</td>
+                  <td><strong>0 B</strong> — Ciclo try-with-resources restaurando o link anterior.</td>
                 </tr>
                 <tr>
                   <td><strong>Cached Site Lookup</strong></td>
                   <td>&lt; 5 ns</td>
-                  <td>Lock-free ConcurrentHashMap lookup for statically registered call sites.</td>
+                  <td><strong>0 B</strong> — Cache <code>BY_DESCRIPTION</code> lock-free (zero alocação transitória).</td>
                 </tr>
                 <tr>
-                  <td><strong>End-to-End Thread Hop Overhead</strong></td>
-                  <td>~150 ns</td>
-                  <td>Negligible compared to OS thread scheduler jitter (typically 1–5 µs).</td>
+                  <td><strong>Project Reactor Pipeline</strong></td>
+                  <td>+0% a +2% (dentro do erro)</td>
+                  <td><strong>~5x menos alocação</strong> do que <code>Hooks.onOperatorDebug()</code> nativo.</td>
+                </tr>
+                <tr>
+                  <td><strong>Agente com CompletableFuture</strong></td>
+                  <td>~1 a 2 µs (pipeline 3 hops)</td>
+                  <td><strong>~230 B por hop</strong> (nó <code>Link</code> 40 B + wrappers + nó de continuação JDK).</td>
                 </tr>
               </tbody>
             </table>
           </div>
         </section>
 
-        <!-- 15. Getting Started -->
+        <!-- 15. Static State Architecture & Operational Limitations -->
+        <section class="wiki-section" id="static-state-limitations">
+          <h2>15. Global Static State: Architecture &amp; Operational Limitations</h2>
+          <p>
+            Para instrumentar o código de forma transparente sem poluir APIs corporativas, o Ariadne utiliza componentes estáticos de escopo global. É indispensável compreender o modelo de concorrência e as limitações inerentes a esse design:
+          </p>
+          <div class="wiki-callout info">
+            <h4>1. Registro Global de Call Sites (<code>SiteRegistry</code>)</h4>
+            <p>
+              O <code>SiteRegistry</code> armazena metadados de pontos de chamada em mapas concorrentes estáticos (<code>ConcurrentHashMap</code>). Em sistemas convencionais (Spring Boot, Micronaut, Quarkus), o total de pontos de chamada instrumentados é finito e restrito (dezenas a centenas de locais). No entanto, caso uma aplicação gere classes ou scripts dinamicamente em loop infinito sem limites, os metadados residirão em memória. Para evitar vazamentos em ambientes dinâmicos ou testes unitários, o Ariadne fornece métodos explícitos de gerenciamento: <code>SiteRegistry.clear()</code> e <code>SiteRegistry.size()</code>.
+            </p>
+          </div>
+          <div class="wiki-callout info">
+            <h4>2. Isolamento de Threads e Prevenção de Context Leaks (<code>ThreadLocalContextCarrier</code>)</h4>
+            <p>
+              O vínculo causal entre threads é propagado através de <code>ThreadLocal</code>. Em pools reutilizáveis de threads (como <code>ForkJoinPool</code> ou <code>ThreadPoolExecutor</code>), esquecer uma referência causaria poluição de contexto em tarefas posteriores. O Ariadne garante a integridade desse ciclo: todos os invólucros (<code>AriadneRunnable</code>, <code>AriadneCallable</code>) e advices do agente implementam <code>try-finally</code> obrigatório com <code>attach()</code> e <code>close()</code>, restaurando estritamente o estado original da thread.
+            </p>
+          </div>
+          <div class="wiki-callout info">
+            <h4>3. Injeção no Bootstrap ClassLoader</h4>
+            <p>
+              Para que classes do núcleo (<code>java.base</code>) possam invocar o motor de causalidade sem erros de ligação de módulos, o agente injeta o JAR do núcleo no Bootstrap ClassLoader. Em arquiteturas modulares ou com recarga a quente de classes (como servidores OSGi ou contêineres EAR legados), as classes injetadas no bootstrap persistem durante todo o ciclo de vida da JVM.
+            </p>
+          </div>
+        </section>
+
+        <!-- 16. Getting Started -->
         <section class="wiki-section" id="getting-started">
-          <h2>15. Getting Started & Installation</h2>
+          <h2>16. Getting Started &amp; Installation</h2>
           <h3>Option A: Zero-Code Java Agent (Recommended)</h3>
           <p>
             Download <code>ariadne-agent-0.1.0-alpha.2.jar</code> from the <a href="https://github.com/AfonsoPaiva/ARIADNE/releases" target="_blank" rel="noopener" style="color: var(--accent-red); font-weight: 700; text-decoration: underline;">GitHub Releases</a> page and add the flag to your JVM startup script:

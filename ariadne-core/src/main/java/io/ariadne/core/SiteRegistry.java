@@ -15,6 +15,7 @@ public final class SiteRegistry {
     private static final AtomicInteger ID_GENERATOR = new AtomicInteger(1);
     private static final Map<Integer, CallSiteMetadata> BY_ID = new ConcurrentHashMap<>();
     private static final Map<CallSiteMetadata, Integer> BY_METADATA = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> BY_DESCRIPTION = new ConcurrentHashMap<>();
 
     private static final StackWalker STACK_WALKER = StackWalker.getInstance(
             StackWalker.Option.RETAIN_CLASS_REFERENCE
@@ -46,20 +47,26 @@ public final class SiteRegistry {
 
     /**
      * Fast-path registration for call sites known statically (e.g. agent advice, reactive scheduler hooks).
-     * Avoids StackWalker overhead entirely — cost is one ConcurrentHashMap lookup (~5 ns) after first call.
+     * Avoids StackWalker and object allocation entirely — cost is one ConcurrentHashMap lookup (~5 ns, 0 B allocation)
+     * after first call.
      *
      * @param description Static description of the instrumented call site
      * @return Deterministic siteId for this description
      */
     public static int getOrRegister(String description) {
-        CallSiteMetadata metadata = new CallSiteMetadata(
-                "io.ariadne.agent", description, null, -1, description
-        );
-        Integer existing = BY_METADATA.get(metadata);
+        if (description == null) {
+            return 0;
+        }
+        Integer existing = BY_DESCRIPTION.get(description);
         if (existing != null) {
             return existing;
         }
-        return register(metadata);
+        CallSiteMetadata metadata = new CallSiteMetadata(
+                "io.ariadne.agent", description, null, -1, description
+        );
+        int newId = register(metadata);
+        BY_DESCRIPTION.putIfAbsent(description, newId);
+        return newId;
     }
 
     /**
@@ -126,6 +133,7 @@ public final class SiteRegistry {
     static void resetForTests() {
         BY_ID.clear();
         BY_METADATA.clear();
+        BY_DESCRIPTION.clear();
         ID_GENERATOR.set(1);
     }
 }

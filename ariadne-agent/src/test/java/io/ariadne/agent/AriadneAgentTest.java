@@ -200,4 +200,36 @@ class AriadneAgentTest {
                     });
         }
     }
+
+    @Test
+    void shouldPropagateCausalityAcrossDirectThreadOfVirtual() throws Exception {
+        setContext(2002);
+
+        java.util.concurrent.atomic.AtomicReference<Throwable> uncaught = new java.util.concurrent.atomic.AtomicReference<>();
+        Class<?> runnableClass = Class.forName("io.ariadne.core.AriadneRunnable", true, null);
+        Object currentLink = BOOTSTRAP_CONTEXT.getMethod("current").invoke(null);
+
+        Runnable rawTask = () -> {
+            throw new IllegalStateException("Crash in Thread.ofVirtual");
+        };
+
+        // Wrap using AriadneRunnable loaded in bootstrap
+        Runnable wrappedTask = (Runnable) runnableClass.getMethod("wrap", Runnable.class, BOOTSTRAP_LINK)
+                .invoke(null, rawTask, currentLink);
+
+        Thread vThread = Thread.ofVirtual()
+                .name("direct-virtual-test")
+                .uncaughtExceptionHandler((t, e) -> uncaught.set(e))
+                .start(wrappedTask);
+        vThread.join(5000);
+
+        assertThat(uncaught.get())
+                .isInstanceOf(IllegalStateException.class)
+                .satisfies(ex -> {
+                    Throwable[] suppressed = ex.getSuppressed();
+                    assertThat(suppressed)
+                            .anyMatch(t -> t.getClass().getName().equals("io.ariadne.core.AsyncCausalityException")
+                                    && t.getMessage().contains("hop"));
+                });
+    }
 }

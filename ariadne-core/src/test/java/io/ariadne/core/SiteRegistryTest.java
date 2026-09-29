@@ -1,9 +1,8 @@
 package io.ariadne.core;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 class SiteRegistryTest {
 
@@ -55,5 +54,29 @@ class SiteRegistryTest {
         assertThat(metadata.className()).isEqualTo(SiteRegistryTest.class.getName());
         assertThat(metadata.methodName()).isEqualTo("shouldCaptureCurrentCallerSiteId");
         assertThat(metadata.description()).isEqualTo("test-site");
+    }
+
+    @Test
+    void shouldCacheAndReuseIdForStaticDescription() {
+        int id1 = SiteRegistry.getOrRegister("Executor.execute");
+        int id2 = SiteRegistry.getOrRegister("Executor.execute");
+
+        assertThat(id1).isGreaterThan(0);
+        assertThat(id1).isEqualTo(id2);
+
+        CallSiteMetadata metadata = SiteRegistry.get(id1);
+        assertThat(metadata).isNotNull();
+        assertThat(metadata.description()).isEqualTo("Executor.execute");
+        assertThat(metadata.className()).isEqualTo("io.ariadne.agent");
+    }
+
+    @Test
+    void shouldClearAllRegistrations() {
+        int id1 = SiteRegistry.getOrRegister("Test.desc");
+        assertThat(SiteRegistry.size()).isGreaterThanOrEqualTo(1);
+
+        SiteRegistry.clear();
+        assertThat(SiteRegistry.size()).isEqualTo(0);
+        assertThat(SiteRegistry.get(id1)).isNull();
     }
 }

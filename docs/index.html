@@ -974,8 +974,8 @@
             <li class="pvs-item">
               <span class="pvs-icon check">✓</span>
               <div>
-                <span class="pvs-item-title">32-Byte Causal Pointers:</span>
-                At task dispatch, Ariadne captures an immutable reference link pointing to the caller frame. Link allocation consumes 32–40 bytes in Eden space with Compressed OOPs enabled.
+                <span class="pvs-item-title">40-Byte Causal Pointers:</span>
+                At task dispatch, Ariadne captures an immutable reference link pointing to the caller frame. Link allocation consumes exactly 40 bytes in Eden space with Compressed OOPs enabled (HotSpot 64-bit alignment).
               </div>
             </li>
             <li class="pvs-item">
@@ -1078,22 +1078,22 @@
         <div class="stat-node">
           <div class="stat-number">~2 ns</div>
           <div class="stat-name">Context Read Latency</div>
-          <div class="stat-explain">Reads active thread link at CPU L1 cache speed.</div>
+          <div class="stat-explain">Reads active thread link at CPU L1 cache speed (0 B).</div>
         </div>
         <div class="stat-node">
           <div class="stat-number">&lt; 4 ns</div>
           <div class="stat-name">Link Allocation Cost</div>
-          <div class="stat-explain">32–40 byte immutable record, low-churn TLAB allocation without lock contention.</div>
+          <div class="stat-explain">Exatamente 40 bytes (TLAB allocation, Compressed OOPs).</div>
         </div>
         <div class="stat-node">
-          <div class="stat-number">&lt; 150 ns</div>
-          <div class="stat-name">Per-Hop Overhead</div>
-          <div class="stat-explain">Measured across multi-threaded executor boundaries under load.</div>
+          <div class="stat-number">~230 B</div>
+          <div class="stat-name">Per-Hop Allocation</div>
+          <div class="stat-explain">End-to-end async hop total (Link + execution wrapper + JDK task).</div>
         </div>
         <div class="stat-node">
-          <div class="stat-number">Low Churn</div>
-          <div class="stat-name">Happy Path Allocation</div>
-          <div class="stat-explain">Lightweight nodes collected in young gen; zero stack frames created on success.</div>
+          <div class="stat-number">0 B</div>
+          <div class="stat-name">Cached Site Lookup</div>
+          <div class="stat-explain">Zero alocação em regime permanente via cache lock-free de descritores.</div>
         </div>
       </div>
     </div>
@@ -1104,7 +1104,7 @@
     <div class="container">
       <h2 class="section-title">Benchmarks</h2>
       <p class="section-subtitle">
-        Standardized JMH 1.37 benchmarks on Linux x86_64 (OpenJDK 21.0.2 LTS, 5 warmup + 5 measurement iterations, compiler blackholes active).
+        Standardized JMH 1.37 benchmarks on Linux x86_64 (OpenJDK 21.0.2 LTS, 5 warmup + 5 measurement iterations, compiler blackholes active, -prof gc).
       </p>
 
       <div class="chart-grid">
@@ -1116,25 +1116,25 @@
           <div class="bar-row">
             <div class="bar-meta">
               <span>Baseline (No Tracking)</span>
-              <span>7.82 µs</span>
+              <span>28.1 µs / op</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill baseline" style="width: 78%;"></div>
+              <div class="bar-fill baseline" style="width: 75%;"></div>
             </div>
           </div>
 
           <div class="bar-row">
             <div class="bar-meta">
-              <span style="color: var(--accent-red); font-weight: 700;">Ariadne Causal Tracking</span>
-              <span style="color: var(--accent-red); font-weight: 700;">8.27 µs (+0.45 µs total)</span>
+              <span style="color: var(--accent-red); font-weight: 700;">Agente com CompletableFuture</span>
+              <span style="color: var(--accent-red); font-weight: 700;">+1 a 2 µs por pipeline de 3 hops (~230 B/hop)</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill ariadne" style="width: 82%;"></div>
+              <div class="bar-fill ariadne" style="width: 79%;"></div>
             </div>
           </div>
 
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px;">
-            Combined overhead across all three asynchronous boundaries is <strong>&lt; 500 nanoseconds</strong> (~150 ns per hop).
+            O escalonamento e troca de contexto pelo SO dominam a latência absoluta (~28 µs). O overhead do agente Ariadne é de apenas <strong>~1 a 2 µs por pipeline de 3 hops</strong>, consumindo <strong>~230 B por hop</strong>.
           </p>
         </div>
 
@@ -1145,7 +1145,7 @@
 
           <div class="bar-row">
             <div class="bar-meta">
-              <span>Baseline (No Tracking)</span>
+              <span>Baseline (Sem Tracking)</span>
               <span>11.91 µs</span>
             </div>
             <div class="bar-track">
@@ -1155,28 +1155,38 @@
 
           <div class="bar-row">
             <div class="bar-meta">
-              <span style="color: var(--accent-red); font-weight: 700;">Ariadne Hooks</span>
-              <span style="color: var(--accent-red); font-weight: 700;">12.59 µs (+5.7%)</span>
+              <span style="color: var(--accent-red); font-weight: 700;">Ariadne Hooks (Reactor)</span>
+              <span style="color: var(--accent-red); font-weight: 700;">+0 a 2% (sem diferença mensurável, dentro do erro)</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill ariadne" style="width: 68%;"></div>
+              <div class="bar-fill ariadne" style="width: 66%;"></div>
             </div>
           </div>
 
           <div class="bar-row">
             <div class="bar-meta">
-              <span>Reactor onOperatorDebug()</span>
-              <span>13.42 µs (+12.6%)</span>
+              <span>Reactor Hooks.onOperatorDebug()</span>
+              <span>~5x mais alocação de memória GC</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill legacy" style="width: 73%;"></div>
+              <div class="bar-fill legacy" style="width: 90%;"></div>
             </div>
           </div>
 
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px;">
-            Ariadne delivers cross-boundary causal context at less than half the overhead of built-in reactive debug modes.
+            <strong>Claim rigorosa:</strong> Reactor: sem diferença mensurável face ao baseline (+0 a 2%, dentro do erro), com <strong>~5x menos alocação</strong> que <code>onOperatorDebug</code>.
           </p>
         </div>
+      </div>
+
+      <div style="display: flex; justify-content: center; margin-top: 36px;">
+        <a href="https://github.com/AfonsoPaiva/ARIADNE/actions/workflows/benchmarks.yml" target="_blank" rel="noopener" class="btn-download" style="text-decoration: none;">
+          <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          <span>Ver Execução dos Benchmarks no GitHub Actions</span>
+          <span>→</span>
+        </a>
       </div>
     </div>
   </section>

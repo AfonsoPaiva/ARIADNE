@@ -37,8 +37,11 @@ public final class AriadneRunnable implements Runnable {
         if (runnable == null) {
             return null;
         }
-        if (runnable instanceof AriadneRunnable ar && ar.capturedLink == link) {
-            return runnable;
+        if (runnable instanceof AriadneRunnable ar) {
+            if (ar.capturedLink == link) {
+                return runnable;
+            }
+            return new AriadneRunnable(ar.unwrap(), link);
         }
         return new AriadneRunnable(runnable, link);
     }

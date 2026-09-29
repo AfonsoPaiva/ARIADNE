@@ -1,7 +1,7 @@
 package io.ariadne.demo;
 
-import io.ariadne.adapter.mdc.AriadneMdcAdapter;
-import io.ariadne.adapter.reactor.AriadneReactorAdapter;
+import java.util.concurrent.Executor;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -11,7 +11,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-import java.util.concurrent.Executor;
+import io.ariadne.adapter.mdc.AriadneMdcAdapter;
+import io.ariadne.adapter.reactor.AriadneReactorAdapter;
 
 /**
  * Interactive Demo comparing exception stack traces:
@@ -94,7 +95,9 @@ public class DemoApplication {
 
     private static void printExceptionDetails(String scenario, Throwable t) {
         System.out.println("Captured Exception for [" + scenario + "]:");
-        System.out.println("Root Cause: " + t.getClass().getName() + ": " + t.getMessage());
+        Throwable cause = t.getCause() != null ? t.getCause() : t;
+        System.out.println("Exception Type: " + cause.getClass().getName());
+        System.out.println("Message:        " + cause.getMessage());
 
         Throwable[] suppressed = t.getSuppressed();
         if (suppressed.length == 0 && t.getCause() != null) {
@@ -105,18 +108,24 @@ public class DemoApplication {
         for (Throwable s : suppressed) {
             if (s.getClass().getName().contains("AsyncCausalityException")) {
                 foundAriadne = true;
-                System.out.println("\n[ARIADNE RECONSTRUCTION DETECTED]:");
+                System.out.println("\n>>> [AFTER: ARIADNE RECONSTRUCTION DETECTED]");
                 System.out.println("  " + s.getMessage());
                 for (StackTraceElement elem : s.getStackTrace()) {
                     System.out.println("    at " + elem);
                 }
+                System.out.println("  --> Causality across asynchronous thread boundaries successfully preserved!");
             }
         }
 
         if (!foundAriadne) {
-            System.out.println("\n[WITHOUT ARIADNE]:");
-            System.out.println("  Notice how the caller (OrderService.placeOrderAsync) is completely MISSING");
-            System.out.println("  from the JVM stack trace above. Only the background worker thread is visible.");
+            System.out.println("\n>>> [BEFORE: DEFAULT JVM TRUNCATED TRACE — BLIND SPOT]");
+            System.out.println("  Standard JVM Stack Trace (First 5 frames):");
+            StackTraceElement[] trace = cause.getStackTrace();
+            for (int i = 0; i < Math.min(5, trace.length); i++) {
+                System.out.println("    at " + trace[i]);
+            }
+            System.out.println("  --> Notice: The caller method and HTTP request context are COMPLETELY LOST.");
+            System.out.println("      The stack trace starts at the background worker thread pool.");
         }
     }
 }
