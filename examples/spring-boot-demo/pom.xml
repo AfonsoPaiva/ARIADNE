@@ -6,7 +6,7 @@
 
     <groupId>io.ariadne.examples</groupId>
     <artifactId>spring-boot-demo</artifactId>
-    <version>0.1.0-alpha.2</version>
+    <version>0.1.0-alpha.3</version>
 
     <name>Ariadne Spring Boot Demo</name>
     <description>Demonstration of asynchronous causality reconstruction in Spring Boot (@Async and WebFlux/Reactor)</description>
@@ -18,7 +18,7 @@
         <reactor.version>3.6.4</reactor.version>
         <slf4j.version>2.0.18</slf4j.version>
         <logback.version>1.5.38</logback.version>
-        <ariadne.version>0.1.0-alpha.2</ariadne.version>
+        <ariadne.version>0.1.0-alpha.3</ariadne.version>
     </properties>
 
     <dependencies>

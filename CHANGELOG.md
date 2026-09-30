@@ -16,6 +16,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.0-alpha.3] - 2026-09-30
+
+### Added
+- **SpotBugs `@Advice` False-Positive Exclusions**: Added targeted exclusions in `spotbugs-exclude.xml` for ByteBuddy `@Advice` inlined fields, eliminating false-positive `MS_EXPOSE_REP` warnings from static public fields required by the bytecode instrumentation contract.
+- **Bootstrap Carrier Restoration Logging**: `AriadneMdcAdapter` now emits a `DEBUG`-level log when bootstrap carrier restoration fails (e.g. agent not attached), improving diagnosability in partial-deployment scenarios.
+- **Technical Wiki & Reference Manual**: Comprehensive `docs/wiki.html` covering architecture, JMX MBean monitoring, bytecode transformation internals, Canary Probes, and full configuration reference.
+- **Dynamic Favicon and Navigation Styling**: Improved `docs/index.html` with dynamic favicon and navigation button styling.
+
+### Changed
+- **Group ID updated to `io.github.afonsopaiva`**: Maven coordinates across all modules updated to the verified Maven Central namespace.
+- **Executor and Thread Advice hardened**: `ExecutorAdvice` and `ThreadAdvice` extended with improved causality tracking for edge cases including `CallerRunsPolicy` nested submissions and direct `Thread.start()` instrumentation.
+- **Call Site Resolution Modes**: Configurable `class` / `sampled:N` / `full` modes introduced in `AriadneConfig`, documented with JMH benchmark data per mode.
+- **Benchmark parameters elevated**: Default JMH parameters raised to 3 forks, 5 warmup + 5 measurement iterations with `-prof gc` for statistically rigorous results.
+- **README rewritten**: Performance metrics, architecture documentation, and trade-off disclosures updated for accuracy and consistency.
+- **Spring version bump**: `spring-expression` updated to `6.2.19` in the Spring Boot demo example.
+
+### Fixed
+- **Bootstrap carrier synchronization simplified**: Removed unnecessary complexity in `AriadneMdcAdapter` bootstrap carrier handoff; improved test coverage for MDC propagation edge cases.
+- **Edge case tests added**: MDC, Reactor, and RxJava adapter tests extended to cover null context, empty context map, and adapter install/uninstall cycles.
+
+---
+
 ## [0.1.0-alpha.2] - 2026-09-30
 
 ### Added
