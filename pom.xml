@@ -346,13 +346,25 @@
                     <plugin>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-maven-plugin</artifactId>
-                        <version>4.8.3.1</version>
+                        <version>4.9.0.0</version>
                         <configuration>
                             <effort>Max</effort>
                             <threshold>Medium</threshold>
                             <failOnError>true</failOnError>
                             <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
                         </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.github.spotbugs</groupId>
+                                <artifactId>spotbugs</artifactId>
+                                <version>4.9.0</version>
+                            </dependency>
+                            <dependency>
+                                <groupId>org.ow2.asm</groupId>
+                                <artifactId>asm</artifactId>
+                                <version>9.7.1</version>
+                            </dependency>
+                        </dependencies>
                         <executions>
                             <execution>
                                 <id>spotbugs-check</id>

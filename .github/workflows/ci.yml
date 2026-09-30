@@ -29,8 +29,13 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build, Test, JaCoCo Coverage & SpotBugs Check
+      - name: Build, Test, JaCoCo Coverage & SpotBugs Check (JDK 21)
+        if: matrix.java-version == '21'
         run: mvn -B clean verify -P ci
+
+      - name: Build & Test (JDK ${{ matrix.java-version }})
+        if: matrix.java-version != '21'
+        run: mvn -B clean verify
 
       - name: Upload JaCoCo Coverage Report
         if: matrix.java-version == '21' && always()
