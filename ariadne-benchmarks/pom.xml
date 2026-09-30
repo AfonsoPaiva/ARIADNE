@@ -16,6 +16,11 @@
     <name>Ariadne Benchmarks</name>
     <description>JMH microbenchmarks measuring nanosecond overhead and memory allocation</description>
 
+    <properties>
+        <jacoco.skip>true</jacoco.skip>
+        <spotbugs.skip>true</spotbugs.skip>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>io.github.afonsopaiva</groupId>

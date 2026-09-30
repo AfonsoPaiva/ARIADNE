@@ -622,7 +622,7 @@
             the object header occupies 12 bytes, references 4 bytes each (parent: 4, attachment: 4), primitive int 4 bytes (siteId: 4, depth: 4), primitive long 8 bytes (threadId: 8). The total field payload is 24 bytes + 12 bytes header = 36 bytes. Applying HotSpot's 8-byte object alignment padding brings the exact instance footprint to <strong>40 bytes</strong>. Without Compressed OOPs, it occupies <strong>48 bytes</strong>.
           </p>
           <p>
-            <strong>Distinção Crucial entre Link e Hop Completo:</strong> O nó de dados fundamental <code>Link</code> consome estritamente <strong>40 bytes</strong> em TLAB. Em um despacho assíncrono real via thread pool ou <code>CompletableFuture</code>, o overhead total medido é de <strong>~230 B por hop</strong>, correspondente à soma do nó <code>Link</code> (40 B) com o wrapper de execução (<code>AriadneRunnable</code> / <code>AriadneCallable</code> ~32 B) e os objetos internos de continuação do JDK. Em contrapartida, soluções tradicionais que criam um <code>Throwable</code> a cada hop geram entre 1.500 B e 4.000 B por hop.
+            <strong>Crucial Distinction Between Link and Full Hop:</strong> The fundamental <code>Link</code> data node consumes strictly <strong>40 bytes</strong> in TLAB. In a real-world asynchronous dispatch via thread pool or <code>CompletableFuture</code>, total measured overhead is <strong>~230 B per hop</strong>, representing the sum of the <code>Link</code> node (40 B), the execution wrapper (<code>AriadneRunnable</code> / <code>AriadneCallable</code> ~32 B), and the JDK's internal continuation objects. In contrast, legacy approaches that instantiate a <code>Throwable</code> at every hop generate between 1,500 B and 4,000 B per hop.
           </p>
         </section>
 
@@ -942,53 +942,53 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
                 <tr>
                   <td><strong>Context Lookup (<code>current()</code>)</strong></td>
                   <td>~2.7 ns</td>
-                  <td><strong>0 B</strong> — Acesso direto via ThreadLocal carrier na velocidade de cache L1.</td>
+                  <td><strong>0 B</strong> — Direct ThreadLocal carrier access at CPU L1 cache speed.</td>
                 </tr>
                 <tr>
                   <td><strong>Link Node Allocation</strong></td>
                   <td>&lt; 3 ns</td>
-                  <td><strong>40 B</strong> — Pegada exata do objeto sob 64-bit JVM com Compressed OOPs.</td>
+                  <td><strong>40 B</strong> — Exact object footprint on 64-bit JVM with Compressed OOPs.</td>
                 </tr>
                 <tr>
                   <td><strong>Context Hop (<code>spawn</code>)</strong></td>
                   <td>&lt; 6 ns</td>
-                  <td><strong>40 B</strong> — Alocação atômica em TLAB + verificação de profundidade.</td>
+                  <td><strong>40 B</strong> — Atomic TLAB allocation + depth bound verification.</td>
                 </tr>
                 <tr>
                   <td><strong>Scoped Attach &amp; Close (<code>contextAttachAndScope</code>)</strong></td>
                   <td>~14.9 ns</td>
-                  <td><strong>0 B</strong> — <code>ThreadLocal</code> pooling de <code>ReusableScope</code> (zero alocação no try-with-resources).</td>
+                  <td><strong>0 B</strong> — <code>ThreadLocal</code> pooling of <code>ReusableScope</code> (zero allocation in try-with-resources).</td>
                 </tr>
                 <tr>
                   <td><strong>Cached Site Lookup (<code>cachedSiteRegistryLookup</code>)</strong></td>
                   <td>~1.28 ns</td>
-                  <td><strong>0 B</strong> — Cache <code>BY_DESCRIPTION</code> lock-free com lookup direto (zero alocação transitória).</td>
+                  <td><strong>0 B</strong> — Lock-free <code>BY_DESCRIPTION</code> cache with direct lookup (zero transient allocation).</td>
                 </tr>
                 <tr>
                   <td><strong>Single-Hop CompletableFuture (Agent)</strong></td>
                   <td>27.99 µs vs 28.62 µs baseline</td>
-                  <td><strong>360 B / op</strong> — Sem overhead estatístico (+0%), com prova ativa de interceptação (<code>getHopsSpawned() &gt; 0</code>).</td>
+                  <td><strong>360 B / op</strong> — No statistical overhead (+0%), with active proof of interception (<code>getHopsSpawned() &gt; 0</code>).</td>
                 </tr>
                 <tr>
                   <td><strong>Multi-Hop CompletableFuture (Agent)</strong></td>
-                  <td>~1 a 2 µs por pipeline de 3 hops</td>
-                  <td><strong>~230 B por hop</strong> (nó <code>Link</code> 40 B + wrappers + nó de continuação JDK).</td>
+                  <td>~1 to 2 µs per 3-hop pipeline</td>
+                  <td><strong>~230 B per hop</strong> (<code>Link</code> node 40 B + wrappers + JDK continuation node).</td>
                 </tr>
                 <tr>
                   <td><strong>Project Reactor Pipeline</strong></td>
-                  <td>+0% a +2% (dentro do erro)</td>
-                  <td><strong>~5x menos alocação</strong> do que <code>Hooks.onOperatorDebug()</code> nativo.</td>
+                  <td>+0% to +2% (within error bounds)</td>
+                  <td><strong>~5x less allocation</strong> than native <code>Hooks.onOperatorDebug()</code>.</td>
                 </tr>
                 <tr>
-                  <td><strong>Spring Boot sob Carga (16 Workers, 25k Reqs)</strong></td>
-                  <td><strong>145.389 req/s</strong> vs 138.506 req/s baseline</td>
-                  <td><strong>p50: 86.9 µs (+1.9% delta)</strong>, p99: 427.9 µs tail; <strong>30.002 causal hops</strong> ativamente rastreados.</td>
+                  <td><strong>Spring Boot Under Load (16 Workers, 25k Reqs)</strong></td>
+                  <td><strong>145,389 req/s</strong> vs 138,506 req/s baseline</td>
+                  <td><strong>p50: 86.9 µs (+1.9% delta)</strong>, p99: 427.9 µs tail; <strong>30,002 causal hops</strong> actively tracked.</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 12px;">
-            Todos os resultados brutos em JSON (<code>benchmark-results.json</code>) e o script utilitário de geração de tabelas (<code>scripts/generate_benchmark_tables.py</code>) são anexados e publicados a cada release no GitHub.
+            All raw JSON results (<code>benchmark-results.json</code>) and the table generation utility script (<code>scripts/generate_benchmark_tables.py</code>) are attached and published with every release on GitHub.
           </p>
         </section>
 
@@ -996,44 +996,44 @@ withContext(AriadneCoroutineBridge.asElement() <span class="keyword">as</span> C
         <section class="wiki-section" id="static-state-limitations">
           <h2>15. Global Static State: Architecture &amp; Operational Limitations</h2>
           <p>
-            Para instrumentar o código de forma transparente sem poluir APIs corporativas, o Ariadne utiliza componentes estáticos de escopo global. É indispensável compreender o modelo de concorrência e as limitações inerentes a esse design:
+            To instrument code transparently without polluting enterprise domain APIs, Ariadne relies on well-scoped global static components. Understanding the concurrency model and operational limitations inherent to this design is essential:
           </p>
           <div class="wiki-callout info">
-            <h4>1. Registro Global de Call Sites (<code>SiteRegistry</code>) e Segurança de ClassLoader</h4>
+            <h4>1. Global Call Site Registry (<code>SiteRegistry</code>) and ClassLoader Safety</h4>
             <p>
-              O <code>SiteRegistry</code> armazena metadados de pontos de chamada em mapas concorrentes estáticos (<code>ConcurrentHashMap</code>). Para assegurar imunidade contra vazamentos de memória (<em>ClassLoader leaks</em>) em servidores de aplicação (Tomcat, Jetty, WebLogic):
+              The <code>SiteRegistry</code> stores call site metadata in static concurrent maps (<code>ConcurrentHashMap</code>). To guarantee immunity against memory leaks (<em>ClassLoader leaks</em>) in application containers (Tomcat, Jetty, WebLogic):
             </p>
             <ul>
-              <li><strong>Desacoplamento de ClassLoader:</strong> A classe <code>CallSiteMetadata</code> armazena estritamente tipos primitivos e instâncias de <code>String</code>. Não mantém qualquer referência forte ou fraca a instâncias de <code>Class&lt;?&gt;</code> ou <code>ClassLoader</code>. O descarregamento de um WAR/EAR nunca é bloqueado pelo registro.</li>
-              <li><strong>Coleta Automática via ClassValue:</strong> O cache <code>ClassValue&lt;Integer&gt;</code> aloca o ID diretamente na estrutura interna da classe alvo. Quando uma classe dinâmica ou lambda é coletada pelo Garbage Collector da JVM, sua entrada é purgada automaticamente sem intervenção.</li>
-              <li><strong>Proteção contra Sobrecarga de Heap (Bounded Capacity):</strong> O registro é delimitado por <code>-Dariadne.registry.max_sites</code> (padrão: <strong>65.536</strong>). Caso código dinâmico gere scripts ilimitados em loop, o registro degrada suavemente para ID genérico em vez de permitir crescimento irrestrito de heap.</li>
-              <li><strong>Gestão Explícita de Ciclo de Vida:</strong> Disponibiliza <code>SiteRegistry.clear()</code> e <code>SiteRegistry.size()</code> para invocação em <code>ServletContextListener.contextDestroyed()</code> ou testes unitários.</li>
+              <li><strong>ClassLoader Decoupling:</strong> The <code>CallSiteMetadata</code> record strictly holds primitive types and <code>String</code> instances. It maintains no strong or weak references to <code>Class&lt;?&gt;</code> or <code>ClassLoader</code> instances. Unloading a WAR/EAR application is never prevented by the registry.</li>
+              <li><strong>Automatic Cleanup via ClassValue:</strong> The <code>ClassValue&lt;Integer&gt;</code> cache associates the site ID directly with the target class's internal metadata. When a dynamically generated class or lambda is collected by the JVM Garbage Collector, its corresponding entry is automatically purged without manual intervention.</li>
+              <li><strong>Heap Overflow Protection (Bounded Capacity):</strong> The registry is bounded by <code>-Dariadne.registry.max_sites</code> (default: <strong>65,536</strong>). If dynamically generated code creates infinite scripts in a loop, the registry gracefully degrades to a generic fallback ID instead of permitting unbounded heap growth.</li>
+              <li><strong>Explicit Lifecycle Management:</strong> Exposes <code>SiteRegistry.clear()</code> and <code>SiteRegistry.size()</code> for invocation in <code>ServletContextListener.contextDestroyed()</code> or automated integration test suites.</li>
             </ul>
           </div>
           <div class="wiki-callout info">
-            <h4>2. Isolamento de Threads e Prevenção de Context Leaks (<code>ThreadLocalContextCarrier</code>)</h4>
+            <h4>2. Thread Isolation and Context Leak Prevention (<code>ThreadLocalContextCarrier</code>)</h4>
             <p>
-              O vínculo causal entre threads é propagado através de <code>ThreadLocal</code>. Em pools reutilizáveis de threads (como <code>ForkJoinPool</code> ou <code>ThreadPoolExecutor</code>), esquecer uma referência causaria poluição de contexto em tarefas posteriores. O Ariadne garante a integridade desse ciclo: todos os invólucros (<code>AriadneRunnable</code>, <code>AriadneCallable</code>) e advices do agente implementam <code>try-finally</code> obrigatório com <code>attach()</code> e <code>close()</code>, restaurando estritamente o estado original da thread.
+              Causal linkage across threads is propagated via <code>ThreadLocal</code>. In reusable thread pools (such as <code>ForkJoinPool</code> or <code>ThreadPoolExecutor</code>), failing to clear a reference would cause cross-task context pollution. Ariadne structurally guarantees cycle integrity: all execution wrappers (<code>AriadneRunnable</code>, <code>AriadneCallable</code>) and Java Agent advices implement mandatory <code>try-finally</code> blocks with <code>attach()</code> and <code>close()</code>, strictly restoring the thread's original context state.
             </p>
           </div>
           <div class="wiki-callout info">
-            <h4>3. Injeção no Bootstrap ClassLoader &amp; Ambientes Multi-Tenant</h4>
+            <h4>3. Bootstrap ClassLoader Injection &amp; Multi-Tenant Environments</h4>
             <p>
-              Para que classes do núcleo do JDK (<code>java.base</code>, como <code>CompletableFuture</code> e <code>ThreadPoolExecutor</code>) possam invocar o motor de causalidade sem erros de ligação de módulos, o agente injeta o JAR do núcleo no Bootstrap ClassLoader search path via <code>Instrumentation.appendToBootstrapClassLoaderSearch</code>.
+              For core JDK classes (<code>java.base</code>, such as <code>CompletableFuture</code> and <code>ThreadPoolExecutor</code>) to invoke the causality engine without module boundary linkage errors, the Java Agent appends the core JAR to the Bootstrap ClassLoader search path via <code>Instrumentation.appendToBootstrapClassLoaderSearch</code>.
             </p>
             <p>
-              <strong>Implicação para Contêineres Corporativos (EAR / WAR / OSGi):</strong> Como as classes injetadas no bootstrap residem no nível mais alto da hierarquia de carregamento da JVM, seu estado estático é compartilhado entre todas as aplicações hospedadas na mesma JVM. Em servidores multi-tenant onde múltiplos WARs compartilham a mesma instância de JVM, as causas assíncronas são segregadas por thread/link individual, mas o registro de metadados é compartilhado a nível global.
+              <strong>Implication for Enterprise Containers (EAR / WAR / OSGi):</strong> Because bootstrap-injected classes reside at the root of the JVM classloader hierarchy, their static state is shared across all applications running in the same JVM process. In multi-tenant environments where multiple WARs share a single JVM instance, asynchronous causality chains remain isolated per thread/link, but the metadata registry is shared globally.
             </p>
           </div>
           <div class="wiki-callout info">
-            <h4>4. Modos de Resolução de Call Sites e Custos Empíricos (<code>CallSiteMode</code>)</h4>
+            <h4>4. Call Site Resolution Modes and Empirical Costs (<code>CallSiteMode</code>)</h4>
             <p>
-              O Ariadne disponibiliza três estratégias de resolução de call site configuráveis via <code>-Dariadne.callsite.mode=class | sampled:N | full</code> (ou variável <code>ARIADNE_CALLSITE_MODE</code>) e alteráveis em tempo de execução via JMX (<code>io.ariadne:type=Ariadne</code>):
+              Ariadne provides three call site capture strategies configurable via <code>-Dariadne.callsite.mode=class | sampled:N | full</code> (or the <code>ARIADNE_CALLSITE_MODE</code> environment variable) and dynamically modifiable at runtime via JMX (<code>io.ariadne:type=Ariadne</code>):
             </p>
             <ul>
-              <li><strong><code>CLASS</code> (Padrão, Recomendado para Produção):</strong> Utiliza <code>ClassValue&lt;Integer&gt;</code> para cachear o nome da classe do chamador a partir da classe do lambda/runnable (ex: <code>PaymentService.lambda(PaymentService.java)</code>). Latência medida: <strong>~5.7 ns/op</strong>, com <strong>0.0 B/op</strong> de alocação de memória (elimina completamente o uso de <code>StackWalker</code> no caminho crítico).</li>
-              <li><strong><code>SAMPLED:N</code>:</strong> Amostra 1 em cada N despachos com <code>StackWalker</code> completo para capturar método e linha exatos, atendendo os restantes via <code>ClassValue</code>. Para N=100: <strong>~39.1 ns/op</strong> e <strong>~9.7 B/op</strong>.</li>
-              <li><strong><code>FULL</code>:</strong> Executa <code>StackWalker</code> em cada despacho assíncrono para identificar o método e a linha exatos do chamador (ex: <code>PaymentService.processPayment(PaymentService.java:16)</code>). Latência: <strong>~1.42 µs/op</strong> e <strong>~960 B/op</strong>. Recomendado para ambientes de homologação, testes canário e depuração localizada.</li>
+              <li><strong><code>CLASS</code> (Default, Recommended for Production):</strong> Uses <code>ClassValue&lt;Integer&gt;</code> to cache the caller class name derived from the lambda/runnable class (e.g., <code>PaymentService.lambda(PaymentService.java)</code>). Measured latency: <strong>~5.7 ns/op</strong> with <strong>0.0 B/op</strong> allocation (completely avoids <code>StackWalker</code> on hot paths).</li>
+              <li><strong><code>SAMPLED:N</code>:</strong> Samples 1 in every N dispatches with full <code>StackWalker</code> traversal to capture exact method name and line number, serving the remainder via <code>ClassValue</code>. For N=100: <strong>~39.1 ns/op</strong> and <strong>~9.7 B/op</strong>.</li>
+              <li><strong><code>FULL</code>:</strong> Executes <code>StackWalker</code> on every asynchronous dispatch to capture caller method and exact source line (e.g., <code>PaymentService.processPayment(PaymentService.java:16)</code>). Latency: <strong>~1.42 µs/op</strong> and <strong>~960 B/op</strong>. Recommended for staging environments, canary testing, and targeted local debugging.</li>
             </ul>
           </div>
         </section>

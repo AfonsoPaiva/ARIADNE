@@ -38,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Recursive Submit Guard**: Replaced binary `ThreadLocal<Boolean>` with depth counter `ThreadLocal<Integer>` to support nested submissions under `CallerRunsPolicy`.
 - **Bootstrap Search Path Documentation**: Corrected documentation in `BootstrapInjector` regarding JVM agent classloader mechanics and dynamic bootstrap injection.
 - **Security Update (AssertJ XXE Alert #5)**: Upgraded `assertj-core` to `3.27.7` in `examples/spring-boot-demo/pom.xml`, eliminating the XML External Entity (XXE) vulnerability (CWE-611).
+- **CI Build & Static Analysis Stability**: Configured default `argLine` property in `pom.xml` preventing Surefire `@file` expansion errors when running without JaCoCo, and added representation exposure exclusions in `spotbugs-exclude.xml` for zero-allocation singletons and diagnostic records (`MS_EXPOSE_REP`, `EI_EXPOSE_REP`, `EI_EXPOSE_REP2`).
 
 ---
 

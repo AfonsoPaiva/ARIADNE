@@ -66,8 +66,8 @@ Traditional diagnostic tools capture full JVM stack traces (`new Throwable()`) o
 Ariadne uses **lazy backward pointer traversal**:
 1. **On the happy path (99.9%+ of executions):** When a task is queued, Ariadne allocates an immutable 40-byte record (`Link`) in thread-local TLAB memory. In default `CLASS` mode, call sites are resolved via a `ClassValue<Integer>` cache avoiding `StackWalker` overhead on hot dispatch paths (~5.7 ns, 0 B allocation).
 2. **End-to-End Hop Efficiency:** Because OS thread scheduling and handoff latency dominate async dispatch (~28 µs), nanosecond-level claims on multi-threaded dispatches are unrealistic. Instead, Ariadne delivers empirically defensible results:
-   - **Project Reactor:** Sem diferença mensurável face ao baseline (+0 a 2%, dentro da margem de erro estatístico), com **~5x menos alocação** que o `Hooks.onOperatorDebug()` nativo do Reactor.
-   - **Agente com CompletableFuture:** Overhead medido de **~1 a 2 µs por pipeline de 3 hops**, com uma pegada de alocação de **~230 B por hop** (incluindo o nó `Link` de 40 B, wrappers de execução e nós de continuação).
+   - **Project Reactor:** No measurable difference versus baseline (+0 to 2%, within statistical error margin), with **~5x less allocation** than native `Hooks.onOperatorDebug()`.
+   - **Java Agent with CompletableFuture:** Measured overhead of **~1 to 2 µs per 3-hop pipeline**, with an allocation footprint of **~230 B per hop** (including the 40 B `Link` node, execution wrappers, and continuation nodes).
 3. **Memory retention protection:** Chains are capped at a configurable depth (`ariadne.max.depth`, default: 32) using a sliding window strategy at spawn time, pruning the oldest hops to allow garbage collection while preserving recent causal context on long-lived, repeating, or recursive tasks.
 4. **On failure only (exceptions):** Ariadne traverses the pointer chain backwards, synthesizes the causal stack frames, and attaches them directly via `Throwable.addSuppressed()`.
 
@@ -161,28 +161,28 @@ Call site capture can be tailored to the environment via `-Dariadne.callsite.mod
 
 ### End-to-End Asynchronous Pipelines (Multi-threaded & Agent)
 
-Em execuções multithreaded reais (pools de threads, `CompletableFuture`, reatores), o tempo de handoff entre threads pelo sistema operacional (~28 µs) domina a latência absoluta, tornando variações de centenas de nanossegundos indistinguíveis do ruído do escalonador. Os dados de benchmark suportam com rigor as seguintes métricas:
+In real-world multi-threaded execution (thread pools, `CompletableFuture`, reactive streams), operating system thread scheduling and handoff latency (~28 µs) dominate absolute latency, making sub-microsecond variations indistinguishable from scheduler jitter. The benchmark data rigorously supports the following metrics:
 
-- **Project Reactor:** Sem diferença mensurável face ao baseline (+0 a 2%, dentro da margem de erro estatístico), com **~5x menos alocação** que o `onOperatorDebug` nativo.
-- **Agente com CompletableFuture:** **~1 a 2 µs por pipeline de 3 hops**, com **~230 B por hop** (compreendendo o nó `Link` de 40 B, wrappers `AriadneRunnable`/`AriadneCallable` e objetos de tarefa do JDK).
+- **Project Reactor:** No measurable difference versus baseline (+0 to 2%, within statistical error margin), with **~5x less allocation** than native `onOperatorDebug`.
+- **Java Agent with CompletableFuture:** **~1 to 2 µs per 3-hop pipeline**, with **~230 B per hop** (comprising the 40 B `Link` node, `AriadneRunnable`/`AriadneCallable` wrappers, and JDK task objects).
 
-> 📊 **Metodologia Reproduzível:** Os microbenchmarks isolados são executados via `CoreOperationsBenchmark` eliminando o ruído de escalonamento do SO. Os benchmarks ponta a ponta multi-threaded são automatizados no [JMH Benchmark Workflow](.github/workflows/benchmarks.yml) (OpenJDK 21 HotSpot, `-prof gc`, 5 warmups, 5 iterações, 3 forks).
+> 📊 **Reproducible Methodology:** Isolated microbenchmarks run via `CoreOperationsBenchmark` eliminating OS scheduling noise. End-to-end multi-threaded benchmarks are automated in the [JMH Benchmark Workflow](.github/workflows/benchmarks.yml) (OpenJDK 21 HotSpot, `-prof gc`, 5 warmups, 5 iterations, 3 forks).
 
 ---
 
-## Arquitetura e Limitações do Estado Estático Global
+## Architecture and Limitations of Global Static State
 
-Para operar de forma transparente via Java Agent e adapters sem exigir modificações manuais de código, o Ariadne utiliza componentes globais bem delimitados. É fundamental compreender o design e as suas limitações operacionais:
+To operate transparently via Java Agent and adapters without requiring manual code modifications, Ariadne relies on well-scoped global static components. Understanding the architectural design and its operational trade-offs is essential:
 
-1. **`SiteRegistry` (Cache Global de Call Sites):**
-   - **Mecanismo:** Mantém mapas estáticos concorrentes (`ConcurrentHashMap`) indexando metadados de call sites para IDs inteiros compactos (`BY_ID`, `BY_METADATA`, `BY_DESCRIPTION`).
-   - **Limitação / Trade-off:** O consumo de memória cresce proporcionalmente ao número de pontos de chamada distintos. Em aplicações padrão (Spring Boot, Reactor), o conjunto de pontos de injeção em bytecode é finito e pequeno (dezenas a centenas de registros). Contudo, em ambientes com geração dinâmica contínua e irrestrita de scripts/classes, o registro reteria referências indefinidamente. Para mitigar isso, o Ariadne disponibiliza `SiteRegistry.clear()` e `SiteRegistry.size()` para gestão e limpeza controlada.
-2. **`AriadneContext` e ThreadLocals:**
-   - **Mecanismo:** O contexto ativo por thread é gerenciado por `ThreadLocalContextCarrier`.
-   - **Limitação / Trade-off:** Em pools de threads onde threads de trabalho são reutilizadas indefinidamente, um contexto que não fosse desanexado causaria "context leak" entre tarefas. O Ariadne previne isso estruturalmente através de blocos `try-finally` em todos os wrappers (`AriadneRunnable`, `AriadneCallable`) e no advice do agente (`@Advice.OnMethodExit`).
-3. **Isolamento de ClassLoader no Java Agent:**
-   - **Mecanismo:** O agente utiliza injeção no Bootstrap ClassLoader (`BootstrapInjector`) para que classes essenciais do núcleo (`io.ariadne.core`) estejam visíveis para classes do sistema (`java.base`, `java.util.concurrent`).
-   - **Limitação:** Em servidores corporativos legados com múltiplos ClassLoaders hierárquicos (EAR/WAR multi-tenant), as classes de causalidade operam no escopo da JVM inteira.
+1. **`SiteRegistry` (Global Call Site Cache):**
+   - **Mechanism:** Maintains static concurrent maps (`ConcurrentHashMap`) indexing call site metadata to compact integer IDs (`BY_ID`, `BY_METADATA`, `BY_DESCRIPTION`).
+   - **Limitation / Trade-off:** Memory consumption grows proportionally with the number of unique call sites. In standard enterprise applications (Spring Boot, Reactor), bytecode injection points are finite and small (dozens to hundreds of records). However, in environments with continuous, unbounded dynamic class or script generation, the registry would retain metadata indefinitely. To mitigate this, Ariadne provides `SiteRegistry.clear()` and `SiteRegistry.size()` for controlled management and testing.
+2. **`AriadneContext` and ThreadLocals:**
+   - **Mechanism:** Active thread context is managed by `ThreadLocalContextCarrier`.
+   - **Limitation / Trade-off:** In thread pools where worker threads are reused indefinitely, failing to detach a context would cause cross-task context leakage. Ariadne structurally prevents this via mandatory `try-finally` blocks across all execution wrappers (`AriadneRunnable`, `AriadneCallable`) and Java Agent advice (`@Advice.OnMethodExit`).
+3. **ClassLoader Isolation in Java Agent:**
+   - **Mechanism:** The agent injects essential core classes (`io.ariadne.core`) into the Bootstrap ClassLoader search path (`BootstrapInjector`) so they are visible to JDK system classes (`java.base`, `java.util.concurrent`).
+   - **Limitation:** In legacy enterprise application servers with complex hierarchical ClassLoaders (multi-tenant EAR/WAR containers), causality engine classes operate at the whole-JVM scope.
 
 ---
 

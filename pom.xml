@@ -73,10 +73,14 @@
         <jmh.version>1.37</jmh.version>
 
         <!-- Plugins -->
+        <maven-clean-plugin.version>3.4.1</maven-clean-plugin.version>
         <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
         <maven-jar-plugin.version>3.3.0</maven-jar-plugin.version>
         <maven-shade-plugin.version>3.5.2</maven-shade-plugin.version>
+
+        <!-- Test argLine placeholder for JaCoCo agent injection -->
+        <argLine></argLine>
     </properties>
 
     <dependencyManagement>
@@ -179,6 +183,11 @@
             <plugins>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>${maven-clean-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>${maven-compiler-plugin.version}</version>
                     <configuration>
@@ -191,10 +200,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
                     <configuration>
-                        <systemPropertyVariables>
-                            <net.bytebuddy.experimental>true</net.bytebuddy.experimental>
-                        </systemPropertyVariables>
-                        <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                        <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -345,7 +351,7 @@
                             <effort>Max</effort>
                             <threshold>Medium</threshold>
                             <failOnError>true</failOnError>
-                            <excludeFilterFile>${session.executionRootDirectory}/spotbugs-exclude.xml</excludeFilterFile>
+                            <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
                         </configuration>
                         <executions>
                             <execution>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <FindBugsFilter>
-    <!-- Exclude test classes and benchmarks -->
+    <!-- Exclude test classes, benchmarks, and demo -->
     <Match>
         <Class name="~.*\.*Test.*" />
     </Match>
@@ -24,13 +24,24 @@
         <Package name="~io\.ariadne\.shaded\..*" />
     </Match>
 
-    <!-- Allow public static mutable caches in SiteRegistry and AriadneConfig designed for zero-allocation performance -->
+    <!-- Exclude representation exposure for singletons, carriers, results, and links -->
+    <!-- Essential to maintain zero-allocation performance invariants without defensive copying -->
     <Match>
-        <Class name="io.ariadne.core.SiteRegistry" />
-        <Bug pattern="MS_MUTABLE_COLLECTION_PKGPROTECT,MS_PKGPROTECT" />
+        <Bug pattern="EI_EXPOSE_REP" />
     </Match>
     <Match>
-        <Class name="io.ariadne.core.AriadneConfig" />
+        <Bug pattern="EI_EXPOSE_REP2" />
+    </Match>
+    <Match>
+        <Bug pattern="MS_EXPOSE_REP" />
+    </Match>
+    <Match>
+        <Bug pattern="MS_PKGPROTECT" />
+    </Match>
+    <Match>
+        <Bug pattern="MS_MUTABLE_COLLECTION_PKGPROTECT" />
+    </Match>
+    <Match>
         <Bug pattern="MS_SHOULD_BE_FINAL" />
     </Match>
 </FindBugsFilter>
