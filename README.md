@@ -2,7 +2,7 @@
   <img src="docs/Images/logo-vertical-dark-background.svg" alt="Ariadne Logo" width="320">
 </p>
 
-<h3 align="center">Zero-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
+<h3 align="center">Low-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
 
 <p align="center">
   <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.2"><img src="https://img.shields.io/badge/Release-v0.1.0--alpha.2-911010?style=for-the-badge" alt="Release"></a>
