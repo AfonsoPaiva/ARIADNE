@@ -8,6 +8,8 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
 import io.ariadne.core.AriadneConfig;
@@ -26,6 +28,7 @@ import io.ariadne.core.ContextCarrier;
  */
 public final class AriadneMdcAdapter {
 
+    private static final Logger log = LoggerFactory.getLogger(AriadneMdcAdapter.class);
     private static final String FRAMEWORK_NAME = "SLF4J MDC";
     private static final AtomicBoolean INSTALLED = new AtomicBoolean(false);
     private static volatile ContextCarrier ORIGINAL_CARRIER = null;
@@ -152,7 +155,9 @@ public final class AriadneMdcAdapter {
             try {
                 Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, bootContext.getClassLoader());
                 bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, ORIGINAL_BOOTSTRAP_CARRIER);
-            } catch (ReflectiveOperationException ignored) {}
+            } catch (ReflectiveOperationException e) {
+                log.debug("Ariadne MDC: could not restore bootstrap carrier via reflection (agent not attached?)", e);
+            }
             ORIGINAL_BOOTSTRAP_CARRIER = null;
         }
     }
@@ -174,7 +179,9 @@ public final class AriadneMdcAdapter {
             try {
                 Class<?> bootContext = Class.forName("io.ariadne.core.AriadneContext", false, null);
                 restoreBootstrapCarrier(bootContext);
-            } catch (ReflectiveOperationException ignored) {}
+            } catch (ReflectiveOperationException e) {
+                log.debug("Ariadne MDC: bootstrap AriadneContext not found via null classloader (agent not attached?)", e);
+            }
             ORIGINAL_BOOTSTRAP_CARRIER = null;
         }
 
