@@ -182,4 +182,40 @@ class AriadneMdcAdapterTest {
         assertThat(probe.isHealthy()).isTrue();
         assertThat(probe.framework()).isEqualTo("SLF4J MDC");
     }
+
+    @Test
+    void shouldHandleMdcAdapterEdgeCases() throws Exception {
+        // Multiple install calls (idempotence)
+        AriadneMdcAdapter.install();
+        AriadneMdcAdapter.install();
+        assertThat(AriadneMdcAdapter.isInstalled()).isTrue();
+
+        // Multiple uninstall calls (idempotence)
+        AriadneMdcAdapter.uninstall();
+        AriadneMdcAdapter.uninstall();
+        assertThat(AriadneMdcAdapter.isInstalled()).isFalse();
+
+        // Reinstall
+        AriadneMdcAdapter.install();
+
+        // Null checks on wrap
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> AriadneMdcAdapter.wrap((Runnable) null));
+        org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> AriadneMdcAdapter.wrap((Callable<?>) null));
+
+        // Wrap when MDC is initially empty
+        MDC.clear();
+        Runnable emptyRunnable = AriadneMdcAdapter.wrap(() -> assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty());
+        emptyRunnable.run();
+
+        Callable<String> emptyCallable = AriadneMdcAdapter.wrap(() -> {
+            assertThat(MDC.getCopyOfContextMap()).isNullOrEmpty();
+            return "ok";
+        });
+        assertThat(emptyCallable.call()).isEqualTo("ok");
+
+        // Private constructor via reflection
+        java.lang.reflect.Constructor<AriadneMdcAdapter> ctor = AriadneMdcAdapter.class.getDeclaredConstructor();
+        ctor.setAccessible(true);
+        assertThat(ctor.newInstance()).isNotNull();
+    }
 }

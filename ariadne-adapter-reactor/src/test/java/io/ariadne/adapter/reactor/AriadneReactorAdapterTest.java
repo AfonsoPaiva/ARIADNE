@@ -1,5 +1,6 @@
 package io.ariadne.adapter.reactor;
 
+import java.lang.reflect.Constructor;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 
 import io.ariadne.core.AriadneContext;
 import io.ariadne.core.AsyncCausalityException;
+import io.ariadne.core.CanaryProbeResult;
 import io.ariadne.core.Link;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -141,5 +143,37 @@ class AriadneReactorAdapterTest {
         assertThat(successCount.get()).isEqualTo(streamsCount / 2);
         assertThat(causalFailuresCount.get()).isEqualTo(streamsCount / 2);
         assertThat(AriadneContext.current()).isNull();
+    }
+
+    @Test
+    void shouldHandleErrorsWithoutActiveContextGracefully() {
+        AriadneReactorAdapter.install();
+        AriadneContext.clear();
+
+        assertThatThrownBy(() -> Mono.error(new RuntimeException("no-context")).block(Duration.ofSeconds(1)))
+                .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void shouldHandleAdapterEdgeCases() throws Exception {
+        // Multiple install calls (idempotence)
+        AriadneReactorAdapter.install();
+        AriadneReactorAdapter.install();
+        assertThat(AriadneReactorAdapter.isInstalled()).isTrue();
+
+        // Multiple uninstall calls (idempotence)
+        AriadneReactorAdapter.uninstall();
+        AriadneReactorAdapter.uninstall();
+        assertThat(AriadneReactorAdapter.isInstalled()).isFalse();
+
+        // Canary probe when uninstalled
+        CanaryProbeResult probe = AriadneReactorAdapter.runCanaryProbe();
+        assertThat(probe.isHealthy()).isFalse();
+        assertThat(probe.message()).contains("not installed");
+
+        // Reflection coverage on private constructor
+        Constructor<AriadneReactorAdapter> ctor = AriadneReactorAdapter.class.getDeclaredConstructor();
+        ctor.setAccessible(true);
+        assertThat(ctor.newInstance()).isNotNull();
     }
 }

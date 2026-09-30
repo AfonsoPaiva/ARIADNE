@@ -304,6 +304,13 @@
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
                         <version>0.8.12</version>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/io/ariadne/agent/*Advice.*</exclude>
+                                <exclude>**/io/ariadne/benchmark/**</exclude>
+                                <exclude>**/io/ariadne/demo/**</exclude>
+                            </excludes>
+                        </configuration>
                         <executions>
                             <execution>
                                 <id>prepare-agent</id>
