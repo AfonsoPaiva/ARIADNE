@@ -44,4 +44,21 @@
     <Match>
         <Bug pattern="MS_SHOULD_BE_FINAL" />
     </Match>
+    <!-- ================================================================
+         ByteBuddy @Advice false positives — DLS_DEAD_LOCAL_STORE
+         ================================================================
+         In ByteBuddy Advice, parameters annotated with
+           @Advice.Argument(value = N, readOnly = false)
+         MUST be reassigned inside @Advice.OnMethodEnter to rewrite the
+         corresponding argument at the instrumented call site. SpotBugs
+         analyses the advice source class in isolation and cannot see that
+         the assignment is inlined into the target method bytecode; it
+         therefore reports every such reassignment as a "dead local store".
+         The reassignment is semantically correct and load-bearing.
+         Exclusion is scoped strictly to the three *Advice classes. -->
+    <Match>
+        <Class name="~io\.ariadne\.agent\.(CompletableFutureAdvice|ExecutorAdvice|ThreadAdvice)(\$.*)?"/>
+        <Bug pattern="DLS_DEAD_LOCAL_STORE"/>
+    </Match>
+
 </FindBugsFilter>
