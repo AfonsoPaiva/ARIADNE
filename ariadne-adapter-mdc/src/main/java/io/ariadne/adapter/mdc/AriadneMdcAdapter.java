@@ -49,73 +49,7 @@ public final class AriadneMdcAdapter {
         try {
             Class<?> bootContext = Class.forName("io.ariadne.core.AriadneContext", false, null);
             if (bootContext != AriadneContext.class) {
-                Object bootCarrier = bootContext.getMethod("carrier").invoke(null);
-                ORIGINAL_BOOTSTRAP_CARRIER = bootCarrier;
-                Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, null);
-                Class<?> bootScopeType = Class.forName("io.ariadne.core.ContextCarrier$Scope", false, null);
-                Class<?> bootLinkType = Class.forName("io.ariadne.core.Link", false, null);
-
-                Object proxy = Proxy.newProxyInstance(
-                        null,
-                        new Class<?>[]{ bootCarrierType },
-                        (proxy1, method, args) -> {
-                            String name = method.getName();
-                            if ("spawn".equals(name)) {
-                                if (args != null && args.length >= 1) {
-                                    int siteId = (int) args[0];
-                                    Object payload = (args.length > 1) ? args[1] : null;
-                                    if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {
-                                        Map<String, String> mdc = MDC.getCopyOfContextMap();
-                                        if (mdc != null && !mdc.isEmpty()) {
-                                            payload = mdc;
-                                        }
-                                    }
-                                    Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
-                                    return spawnWithAttach.invoke(bootCarrier, siteId, payload);
-                                } else {
-                                    return method.invoke(bootCarrier, args);
-                                }
-                            } else if ("attach".equals(name)) {
-                                Object linkObj = (args != null && args.length > 0) ? args[0] : null;
-                                Object delegateScope = method.invoke(bootCarrier, args);
-                                if (!AriadneConfig.isMdcPropagationEnabled() || linkObj == null) {
-                                    return delegateScope;
-                                }
-                                Field attachField = bootLinkType.getField("attachment");
-                                Object attachment = attachField.get(linkObj);
-                                if (!(attachment instanceof Map<?, ?> targetMdc)) {
-                                    return delegateScope;
-                                }
-                                Map<String, String> previousMdc = MDC.getCopyOfContextMap();
-                                @SuppressWarnings("unchecked")
-                                Map<String, String> typedTargetMdc = (Map<String, String>) targetMdc;
-                                MDC.setContextMap(typedTargetMdc);
-
-                                return Proxy.newProxyInstance(
-                                        null,
-                                        new Class<?>[]{ bootScopeType },
-                                        (scopeProxy, scopeMethod, scopeArgs) -> {
-                                            if ("close".equals(scopeMethod.getName())) {
-                                                try {
-                                                    if (previousMdc == null || previousMdc.isEmpty()) {
-                                                        MDC.clear();
-                                                    } else {
-                                                        MDC.setContextMap(previousMdc);
-                                                    }
-                                                } finally {
-                                                    bootScopeType.getMethod("close").invoke(delegateScope);
-                                                }
-                                                return null;
-                                            }
-                                            return scopeMethod.invoke(delegateScope, scopeArgs);
-                                        }
-                                );
-                            }
-                            return method.invoke(bootCarrier, args);
-                        }
-                );
-
-                bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, proxy);
+                synchronizeBootstrapCarrier(bootContext);
             }
         } catch (ReflectiveOperationException ignored) {
             // Not on bootstrap or reflection restricted
@@ -135,6 +69,94 @@ public final class AriadneMdcAdapter {
         AriadneManagement.registerMBean();
     }
 
+    static void synchronizeBootstrapCarrier(Class<?> bootContext) throws ReflectiveOperationException {
+        Object bootCarrier = bootContext.getMethod("carrier").invoke(null);
+        ORIGINAL_BOOTSTRAP_CARRIER = bootCarrier;
+        ClassLoader cl = bootContext.getClassLoader();
+        Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, cl);
+        Class<?> bootScopeType = Class.forName("io.ariadne.core.ContextCarrier$Scope", false, cl);
+        Class<?> bootLinkType = Class.forName("io.ariadne.core.Link", false, cl);
+
+        Object proxy = createBootstrapCarrierProxy(bootCarrierType, bootScopeType, bootLinkType, bootCarrier);
+        bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, proxy);
+    }
+
+    static Object createBootstrapCarrierProxy(
+            Class<?> bootCarrierType,
+            Class<?> bootScopeType,
+            Class<?> bootLinkType,
+            Object bootCarrier) {
+        return Proxy.newProxyInstance(
+                bootCarrierType.getClassLoader(),
+                new Class<?>[]{ bootCarrierType },
+                (proxy1, method, args) -> {
+                    String name = method.getName();
+                    if ("spawn".equals(name)) {
+                        if (args != null && args.length >= 1) {
+                            int siteId = (int) args[0];
+                            Object payload = (args.length > 1) ? args[1] : null;
+                            if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {
+                                Map<String, String> mdc = MDC.getCopyOfContextMap();
+                                if (mdc != null && !mdc.isEmpty()) {
+                                    payload = mdc;
+                                }
+                            }
+                            Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
+                            return spawnWithAttach.invoke(bootCarrier, siteId, payload);
+                        } else {
+                            return method.invoke(bootCarrier, args);
+                        }
+                    } else if ("attach".equals(name)) {
+                        Object linkObj = (args != null && args.length > 0) ? args[0] : null;
+                        Object delegateScope = method.invoke(bootCarrier, args);
+                        if (!AriadneConfig.isMdcPropagationEnabled() || linkObj == null) {
+                            return delegateScope;
+                        }
+                        Field attachField = bootLinkType.getField("attachment");
+                        Object attachment = attachField.get(linkObj);
+                        if (!(attachment instanceof Map<?, ?> targetMdc)) {
+                            return delegateScope;
+                        }
+                        Map<String, String> previousMdc = MDC.getCopyOfContextMap();
+                        @SuppressWarnings("unchecked")
+                        Map<String, String> typedTargetMdc = (Map<String, String>) targetMdc;
+                        MDC.setContextMap(typedTargetMdc);
+
+                        return Proxy.newProxyInstance(
+                                bootScopeType.getClassLoader(),
+                                new Class<?>[]{ bootScopeType },
+                                (scopeProxy, scopeMethod, scopeArgs) -> {
+                                    if ("close".equals(scopeMethod.getName())) {
+                                        try {
+                                            if (previousMdc == null || previousMdc.isEmpty()) {
+                                                MDC.clear();
+                                            } else {
+                                                MDC.setContextMap(previousMdc);
+                                            }
+                                        } finally {
+                                            bootScopeType.getMethod("close").invoke(delegateScope);
+                                        }
+                                        return null;
+                                    }
+                                    return scopeMethod.invoke(delegateScope, scopeArgs);
+                                }
+                        );
+                    }
+                    return method.invoke(bootCarrier, args);
+                }
+        );
+    }
+
+    static void restoreBootstrapCarrier(Class<?> bootContext) {
+        if (ORIGINAL_BOOTSTRAP_CARRIER != null && bootContext != null) {
+            try {
+                Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, bootContext.getClassLoader());
+                bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, ORIGINAL_BOOTSTRAP_CARRIER);
+            } catch (ReflectiveOperationException ignored) {}
+            ORIGINAL_BOOTSTRAP_CARRIER = null;
+        }
+    }
+
     /**
      * Uninstalls the MDC adapter, restoring the original {@link ContextCarrier}.
      */
@@ -151,8 +173,7 @@ public final class AriadneMdcAdapter {
         if (ORIGINAL_BOOTSTRAP_CARRIER != null) {
             try {
                 Class<?> bootContext = Class.forName("io.ariadne.core.AriadneContext", false, null);
-                Class<?> bootCarrierType = Class.forName("io.ariadne.core.ContextCarrier", false, null);
-                bootContext.getMethod("setCarrier", bootCarrierType).invoke(null, ORIGINAL_BOOTSTRAP_CARRIER);
+                restoreBootstrapCarrier(bootContext);
             } catch (ReflectiveOperationException ignored) {}
             ORIGINAL_BOOTSTRAP_CARRIER = null;
         }
@@ -181,6 +202,7 @@ public final class AriadneMdcAdapter {
 
             // Verify MDC preservation inside AriadneContext scope
             var link = AriadneContext.spawn(999999);
+            MDC.remove(testKey);
             String capturedInScope;
             try (AriadneContext.Scope scope = AriadneContext.attach(link)) {
                 assert scope != null;
