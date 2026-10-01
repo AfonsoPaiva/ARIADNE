@@ -5,7 +5,7 @@
 <h3 align="center">Low-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
 
 <p align="center">
-  <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.2"><img src="https://img.shields.io/badge/Release-v0.1.0--alpha.2-911010?style=for-the-badge" alt="Release"></a>
+  <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.3"><img src="https://img.shields.io/badge/Release-v0.1.0--alpha.3-911010?style=for-the-badge" alt="Release"></a>
   <img src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21">
   <img src="https://img.shields.io/badge/Byte%20Buddy-1.14.12-2962FF?style=for-the-badge" alt="Byte Buddy">
   <img src="https://img.shields.io/badge/Project%20Reactor-3.6.4-6DB33F?style=for-the-badge&logo=reactivex&logoColor=white" alt="Reactor">
@@ -90,10 +90,10 @@ Ariadne uses **lazy backward pointer traversal** instead:
 
 ### 1. Java Agent (Zero Code Modifications)
 
-Download `ariadne-agent-0.1.0-alpha.2.jar` from [Releases](https://github.com/AfonsoPaiva/ARIADNE/releases) and attach it to your application:
+Download `ariadne-agent-0.1.0-alpha.3.jar` from [Releases](https://github.com/AfonsoPaiva/ARIADNE/releases) and attach it to your application:
 
 ```bash
-java -javaagent:ariadne-agent-0.1.0-alpha.2.jar -jar your-application.jar
+java -javaagent:ariadne-agent-0.1.0-alpha.3.jar -jar your-application.jar
 ```
 
 The agent automatically instruments:
@@ -114,21 +114,21 @@ Ariadne is configured for publication to **Maven Central** under the verified na
 <dependency>
     <groupId>io.github.afonsopaiva</groupId>
     <artifactId>ariadne-core</artifactId>
-    <version>0.1.0-alpha.2</version>
+    <version>0.1.0-alpha.3</version>
 </dependency>
 <!-- Optional SLF4J MDC adapter -->
 <dependency>
     <groupId>io.github.afonsopaiva</groupId>
     <artifactId>ariadne-adapter-mdc</artifactId>
-    <version>0.1.0-alpha.2</version>
+    <version>0.1.0-alpha.3</version>
 </dependency>
 ```
 
 **Gradle:**
 ```kotlin
 dependencies {
-    implementation("io.github.afonsopaiva:ariadne-core:0.1.0-alpha.2")
-    implementation("io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-alpha.2")
+    implementation("io.github.afonsopaiva:ariadne-core:0.1.0-alpha.3")
+    implementation("io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-alpha.3")
 }
 ```
 
