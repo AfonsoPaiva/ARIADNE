@@ -110,7 +110,7 @@ public final class BootstrapInjector {
 
             inst.appendToBootstrapClassLoaderSearch(new JarFile(tempJar));
             INJECTED = true;
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException("Failed to inject Ariadne classes into Bootstrap ClassLoader", e);
         }
     }
