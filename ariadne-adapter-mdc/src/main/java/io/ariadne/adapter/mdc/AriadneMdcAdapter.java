@@ -97,13 +97,7 @@ public final class AriadneMdcAdapter {
                     if ("spawn".equals(name)) {
                         if (args != null && args.length >= 1) {
                             int siteId = (int) args[0];
-                            Object payload = (args.length > 1) ? args[1] : null;
-                            if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {
-                                Map<String, String> mdc = MDC.getCopyOfContextMap();
-                                if (mdc != null && !mdc.isEmpty()) {
-                                    payload = mdc;
-                                }
-                            }
+                            Object payload = AriadneMdcCarrier.resolvePayload((args.length > 1) ? args[1] : null);
                             Method spawnWithAttach = bootCarrier.getClass().getMethod("spawn", int.class, Object.class);
                             return spawnWithAttach.invoke(bootCarrier, siteId, payload);
                         } else {

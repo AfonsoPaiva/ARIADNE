@@ -203,6 +203,8 @@ ARIADNE/
 ├── ariadne-adapter-reactor/    # Project Reactor scheduler hooks & canary probe health-checks
 ├── ariadne-adapter-rxjava/     # RxJava 3 assembly & schedule hooks with fail-safe degradation
 ├── ariadne-adapter-mdc/        # SLF4J MDC context propagation across thread boundaries
+├── ariadne-adapter-otel/       # OpenTelemetry reflection bridge & W3C TraceContext correlation
+├── ariadne-adapter-kotlin/     # Kotlin Coroutines ThreadContextElement adapter
 ├── ariadne-benchmarks/         # Standalone JMH microbenchmark suite
 ├── ariadne-integration-tests/  # End-to-end integration tests & multi-hop verification
 └── docs/                       # Interactive documentation portal & technical wiki
@@ -212,12 +214,12 @@ ARIADNE/
 
 ## Roadmap (Milestone v0.2.0)
 
-The following extensions are planned and currently under active design:
+The core extensions targeted for milestone v0.2.0 are now completed:
 
-- [ ] **W3C TraceContext Integration:** Propagation of `traceparent` headers across thread boundaries.
-- [ ] **OpenTelemetry Reflection Bridge:** Synchronizing active OTel spans with in-process causality.
-- [ ] **Java 21 Scoped Values:** Lexical scope carrier using JDK 21 `java.lang.ScopedValue`.
-- [ ] **Kotlin Coroutines Bridge:** `ThreadContextElement` adapter for Kotlin suspend/resume flows.
+- [x] **W3C TraceContext Integration:** Propagation of `traceparent` headers across thread boundaries.
+- [x] **OpenTelemetry Reflection Bridge:** Synchronizing active OTel spans with in-process causality via `AriadneOtelBridge`.
+- [x] **Java 21 Scoped Values:** Lexical scope carrier using JDK 21 `java.lang.ScopedValue` (`ScopedValueContextCarrier`).
+- [x] **Kotlin Coroutines Bridge:** `ThreadContextElement` adapter for Kotlin suspend/resume flows (`AriadneCoroutineBridge`).
 
 ---
 

@@ -47,14 +47,35 @@ public final class AriadneMdcCarrier implements ContextCarrier {
 
     @Override
     public Link spawn(int siteId, Object attachment) {
-        Object payload = attachment;
-        if (payload == null && AriadneConfig.isMdcPropagationEnabled()) {
-            Map<String, String> mdcContext = MDC.getCopyOfContextMap();
-            if (mdcContext != null && !mdcContext.isEmpty()) {
-                payload = mdcContext;
-            }
+        return delegate.spawn(siteId, resolvePayload(attachment));
+    }
+
+    /**
+     * Computes the spawn payload. A bare {@code TraceContext} (placed by the core facade when W3C
+     * propagation is enabled) is merged into the MDC snapshot under {@code traceparent} so that
+     * neither the MDC nor the trace is lost; any other explicit attachment is kept as-is.
+     * <p>
+     * The trace is recognised by class name rather than {@code instanceof}: with the Java agent,
+     * {@code io.ariadne.core} may be loaded by two class loaders.
+     */
+    static Object resolvePayload(Object attachment) {
+        boolean bareTrace = attachment != null
+                && !(attachment instanceof Map)
+                && "io.ariadne.core.TraceContext".equals(attachment.getClass().getName());
+        if (attachment != null && !bareTrace) {
+            return attachment;
         }
-        return delegate.spawn(siteId, payload);
+        if (!AriadneConfig.isMdcPropagationEnabled()) {
+            return attachment;
+        }
+        Map<String, String> mdcContext = MDC.getCopyOfContextMap();
+        if (mdcContext == null || mdcContext.isEmpty()) {
+            return attachment;
+        }
+        if (bareTrace) {
+            mdcContext.putIfAbsent("traceparent", attachment.toString());
+        }
+        return mdcContext;
     }
 
     @Override

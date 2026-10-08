@@ -176,5 +176,12 @@ public final class AriadneAgent {
         } catch (Throwable ignored) {
             // SLF4J MDC not on classpath
         }
+
+        try {
+            Class<?> otelBridge = Class.forName("io.ariadne.adapter.otel.AriadneOtelBridge");
+            otelBridge.getMethod("installIfEnabled").invoke(null);
+        } catch (Throwable ignored) {
+            // OTel bridge not on classpath or not enabled
+        }
     }
 }

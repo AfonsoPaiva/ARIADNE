@@ -68,19 +68,42 @@ public final class AriadneContext {
      */
     public static Link spawn(int siteId, Object attachment) {
         AriadneMetrics.recordHop();
+        if (TraceContexts.isEnabled()) {
+            attachment = TraceContexts.mergeInto(attachment);
+        }
         return CARRIER.spawn(siteId, attachment);
     }
 
     /**
      * Attaches a {@link Link} to the current context for the duration of a scoped block,
      * restoring the previous link upon closure.
+     * <p>
+     * If W3C trace propagation is enabled ({@link TraceContexts#enable()}) and the link carries a
+     * trace context, that trace also becomes the ambient trace of the current thread for the
+     * duration of the scope.
      */
     public static Scope attach(Link link) {
         ContextCarrier.Scope scope = CARRIER.attach(link);
+        Scope base;
         if (scope instanceof Scope s) {
-            return s;
+            base = s;
+        } else {
+            base = scope::close;
         }
-        return scope::close;
+        if (link != null && TraceContexts.isEnabled()) {
+            TraceContext trace = TraceContexts.fromAttachment(link.attachment);
+            if (trace != null) {
+                Scope traceScope = TraceContexts.attach(trace);
+                return () -> {
+                    try {
+                        traceScope.close();
+                    } finally {
+                        base.close();
+                    }
+                };
+            }
+        }
+        return base;
     }
 
     /**

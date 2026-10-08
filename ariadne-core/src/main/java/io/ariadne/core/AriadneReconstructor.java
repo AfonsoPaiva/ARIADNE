@@ -113,6 +113,8 @@ public final class AriadneReconstructor {
                     if (safeContext != null && !safeContext.isEmpty()) {
                         msg.append(" [Context: ").append(safeContext).append("]");
                     }
+                } else if (contextAttachment instanceof TraceContext traceContext) {
+                    msg.append(" [Trace: ").append(traceContext.toTraceparent()).append("]");
                 } else if (contextAttachment != null) {
                     try {
                         String str = String.valueOf(contextAttachment);

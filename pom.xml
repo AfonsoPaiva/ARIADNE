@@ -52,6 +52,8 @@
         <module>ariadne-adapter-reactor</module>
         <module>ariadne-adapter-rxjava</module>
         <module>ariadne-adapter-mdc</module>
+        <module>ariadne-adapter-otel</module>
+        <module>ariadne-adapter-kotlin</module>
         <module>ariadne-agent</module>
         <module>ariadne-benchmarks</module>
         <module>ariadne-integration-tests</module>
@@ -66,6 +68,8 @@
         <bytebuddy.version>1.14.12</bytebuddy.version>
         <reactor.version>3.6.4</reactor.version>
         <rxjava.version>3.1.8</rxjava.version>
+        <kotlinx-coroutines.version>1.10.2</kotlinx-coroutines.version>
+        <opentelemetry.version>1.49.0</opentelemetry.version>
         <slf4j.version>2.0.18</slf4j.version>
         <logback.version>1.5.38</logback.version>
         <junit.version>5.10.2</junit.version>
@@ -108,6 +112,16 @@
             </dependency>
             <dependency>
                 <groupId>io.github.afonsopaiva</groupId>
+                <artifactId>ariadne-adapter-otel</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.afonsopaiva</groupId>
+                <artifactId>ariadne-adapter-kotlin</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.afonsopaiva</groupId>
                 <artifactId>ariadne-agent</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -134,6 +148,22 @@
                 <groupId>io.reactivex.rxjava3</groupId>
                 <artifactId>rxjava</artifactId>
                 <version>${rxjava.version}</version>
+            </dependency>
+
+            <!-- Kotlin Coroutines (consumed as provided by ariadne-adapter-kotlin) -->
+            <dependency>
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core-jvm</artifactId>
+                <version>${kotlinx-coroutines.version}</version>
+            </dependency>
+
+            <!-- OpenTelemetry (used only by ariadne-benchmarks for the head-to-head comparison) -->
+            <dependency>
+                <groupId>io.opentelemetry</groupId>
+                <artifactId>opentelemetry-bom</artifactId>
+                <version>${opentelemetry.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <!-- JMH Benchmarks -->
