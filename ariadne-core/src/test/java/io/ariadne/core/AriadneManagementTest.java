@@ -75,7 +75,7 @@ class AriadneManagementTest {
 
         assertThat(hops).isEqualTo(2);
         assertThat(reconstructions).isEqualTo(1);
-        assertThat(version).isEqualTo("0.1.0-alpha.2");
+        assertThat(version).isEqualTo("0.1.0-beta.1");
     }
 
     @Test

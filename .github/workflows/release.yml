@@ -50,6 +50,8 @@ jobs:
             ariadne-adapter-reactor/target/ariadne-adapter-reactor-*.jar
             ariadne-adapter-rxjava/target/ariadne-adapter-rxjava-*.jar
             ariadne-adapter-mdc/target/ariadne-adapter-mdc-*.jar
+            ariadne-adapter-otel/target/ariadne-adapter-otel-*.jar
+            ariadne-adapter-kotlin/target/ariadne-adapter-kotlin-*.jar
             ariadne-benchmarks/target/benchmarks.jar
             benchmark-results.json
             scripts/generate_benchmark_tables.py

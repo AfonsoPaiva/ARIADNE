@@ -10,9 +10,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Java 21 Scoped Values (`java.lang.ScopedValue`) carrier preview (JEP 446 / JEP 464).
-- OpenTelemetry trace context link bridge (`Traceparent` causal correlation).
-- Micrometer integration metrics exporter.
+- Micrometer metrics exporter module (`ariadne-adapter-micrometer`).
+- High-level flamegraph export for async causal chains.
+
+---
+
+## [0.1.0-beta.1] - 2026-10-08
+
+### Added
+- **W3C TraceContext Level 1 Propagation**: Native parsing, synthesis, and propagation of `traceparent` headers (`TraceContext` and `TraceContexts`) across thread hops with zero external dependencies.
+- **OpenTelemetry Reflection Bridge**: New `ariadne-adapter-otel` module featuring `AriadneOtelBridge` for zero-dependency reflection synchronization between in-flight Ariadne causal hops and active OTel spans.
+- **Kotlin Coroutines Support**: New `ariadne-adapter-kotlin` module introducing `AriadneCoroutineBridge` and `AriadneContextElement` (`ThreadContextElement`) for seamless causal context propagation across Kotlin coroutine dispatchers and suspend/resume cycles.
+- **JDK 21 Scoped Values**: Production-ready lexical carrier `ScopedValueContextCarrier` leveraging `java.lang.ScopedValue` (JEP 446 / JEP 464 / JEP 487).
+- **Head-to-Head OTel Microbenchmark**: JMH benchmark suite comparing causal context propagation against full OpenTelemetry tracing overhead (6.1 ns vs 47.9 ns, 0 B vs 96 B allocation).
+
+### Changed
+- **Release Packaging**: Enhanced release automation in `.github/workflows/release.yml` to publish standalone adapter JARs for OpenTelemetry and Kotlin Coroutines.
+
+### Fixed
+- **Bootstrap ClassLoader Injection**: Injected `TraceContext`, `TraceContexts`, and `ScopedValueContextCarrier` into the JVM Bootstrap ClassLoader, resolving `NoClassDefFoundError` under Java Agent bytecode transformation.
+- **SpotBugs & Static Analysis Hardening**: Corrected exception handling in `BootstrapInjector` (`REC_CATCH_EXCEPTION`) and aligned SpotBugs plugin dependencies.
 
 ---
 

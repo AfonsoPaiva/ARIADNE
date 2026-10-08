@@ -905,7 +905,7 @@
         <a href="#benchmarks" class="nav-link">Benchmarks</a>
         <a href="#setup" class="nav-link">How to setup</a>
         <a href="#versions" class="nav-link">
-          Releases <span class="nav-badge">v0.1.0-alpha.3</span>
+          Releases <span class="nav-badge">v0.1.0-beta.1</span>
         </a>
         <a href="wiki.html" class="nav-link">Wiki Docs</a>
 
@@ -938,7 +938,7 @@
 
       <div class="hero-actions">
         <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/latest" target="_blank" rel="noopener" class="btn-download">
-          <span>Download Java Agent (v0.1.0-alpha.3)</span>
+          <span>Download Java Agent (v0.1.0-beta.1)</span>
           <span>↓</span>
         </a>
         <a href="wiki.html" class="btn-wiki">
@@ -949,7 +949,7 @@
 
       <!-- Quick Run Command -->
       <div class="cli-bar">
-        <span class="cli-code" id="cmdText">java -javaagent:ariadne-agent-0.1.0-alpha.3.jar -jar app.jar</span>
+        <span class="cli-code" id="cmdText">java -javaagent:ariadne-agent-0.1.0-beta.1.jar -jar app.jar</span>
         <button class="cli-copy-btn" id="copyBtn" type="button">Copy</button>
       </div>
     </div>
@@ -1334,8 +1334,19 @@
           </thead>
           <tbody>
             <tr>
-              <td><strong>v0.1.0-alpha.3</strong></td>
+              <td><strong>v0.1.0-beta.1</strong></td>
               <td><span class="tag-pill">Latest</span></td>
+              <td>First Beta Release: W3C TraceContext Level 1 propagation, OpenTelemetry reflection bridge, Kotlin Coroutines ThreadContextElement adapter, JDK 21 Scoped Values carrier, and hardened Bootstrap ClassLoader injection.</td>
+              <td>
+                <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-beta.1" target="_blank" rel="noopener" class="table-link">
+                  Download JARs
+                </a>
+              </td>
+              <td><code>Beta 1</code></td>
+            </tr>
+            <tr>
+              <td><strong>v0.1.0-alpha.3</strong></td>
+              <td><span class="tag-pill alt">Archive</span></td>
               <td>Call Site Resolution Modes, hardened Executor &amp; Thread Advice, Technical Wiki, MDC bootstrap carrier hardening, and SpotBugs false-positive exclusions.</td>
               <td>
                 <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.3" target="_blank" rel="noopener" class="table-link">
@@ -1427,7 +1438,7 @@
     const snippets = {
       agent: `<span class="code-comment"># 1. Download the pre-built agent JAR from GitHub Releases</span>
 <span class="code-comment"># 2. Attach the -javaagent flag at JVM launch:</span>
-<span class="code-cmd">java</span> <span class="code-flag">-javaagent:ariadne-agent-0.1.0-alpha.3.jar</span> <span class="code-flag">-jar</span> your-application.jar
+<span class="code-cmd">java</span> <span class="code-flag">-javaagent:ariadne-agent-0.1.0-beta.1.jar</span> <span class="code-flag">-jar</span> your-application.jar
 
 <span class="code-comment"># Zero code modifications required.</span>
 <span class="code-comment"># Automatically instruments ThreadPoolExecutor, CompletableFuture,</span>
@@ -1436,30 +1447,30 @@
 &lt;<span class="code-keyword">dependency</span>&gt;
     &lt;<span class="code-type">groupId</span>&gt;io.github.afonsopaiva&lt;/<span class="code-type">groupId</span>&gt;
     &lt;<span class="code-type">artifactId</span>&gt;ariadne-core&lt;/<span class="code-type">artifactId</span>&gt;
-    &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-alpha.3</span>&lt;/<span class="code-type">version</span>&gt;
+    &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-beta.1</span>&lt;/<span class="code-type">version</span>&gt;
 &lt;/<span class="code-keyword">dependency</span>&gt;
 
 <span class="code-comment">&lt;!-- Optional SLF4J MDC context propagation adapter --&gt;</span>
 &lt;<span class="code-keyword">dependency</span>&gt;
     &lt;<span class="code-type">groupId</span>&gt;io.github.afonsopaiva&lt;/<span class="code-type">groupId</span>&gt;
     &lt;<span class="code-type">artifactId</span>&gt;ariadne-adapter-mdc&lt;/<span class="code-type">artifactId</span>&gt;
-    &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-alpha.3</span>&lt;/<span class="code-type">version</span>&gt;
+    &lt;<span class="code-type">version</span>&gt;<span class="code-string">0.1.0-beta.1</span>&lt;/<span class="code-type">version</span>&gt;
 &lt;/<span class="code-keyword">dependency</span>&gt;`,
       gradle: `<span class="code-comment">// build.gradle.kts</span>
 dependencies {
-    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-core:0.1.0-alpha.3"</span>)
-    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-alpha.3"</span>)
-}`,
+    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-core:0.1.0-beta.1"</span>)
+    <span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-adapter-mdc:0.1.0-beta.1"</span>)
+} `,
       kotlin: `<span class="code-comment">// 1. Add Kotlin Coroutines adapter</span>
-<span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-adapter-kotlin:0.1.0-alpha.3"</span>)
+<span class="code-keyword">implementation</span>(<span class="code-string">"io.github.afonsopaiva:ariadne-adapter-kotlin:0.1.0-beta.1"</span>)
 
 <span class="code-comment">// 2. Use ThreadContextElement in coroutine launch/withContext:</span>
 launch(Dispatchers.Default + AriadneCoroutineBridge.asElement()) {
     delay(100) <span class="code-comment">// Suspends and resumes across worker threads</span>
     processOrder() <span class="code-comment">// Causal chain is automatically preserved!</span>
-}`,
+} `,
       otel: `<span class="code-comment"># 1. Enable OpenTelemetry reflection bridge via JVM argument</span>
-<span class="code-cmd">java</span> <span class="code-flag">-Dariadne.otel.bridge.enabled=true</span> <span class="code-flag">-javaagent:ariadne-agent-0.1.0-alpha.3.jar</span> <span class="code-flag">-jar</span> app.jar
+<span class="code-cmd">java</span> <span class="code-flag">-Dariadne.otel.bridge.enabled=true</span> <span class="code-flag">-javaagent:ariadne-agent-0.1.0-beta.1.jar</span> <span class="code-flag">-jar</span> app.jar
 
 <span class="code-comment"># Or programmatically in your code (zero compile-time OTel dependency):</span>
 AriadneOtelBridge.install();

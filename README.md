@@ -5,7 +5,7 @@
 <h3 align="center">Low-overhead, production-safe asynchronous causality stack trace reconstruction for the JVM</h3>
 
 <p align="center">
-  <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-alpha.3"><img src="https://img.shields.io/badge/Release-v0.1.0--alpha.3-911010?style=for-the-badge" alt="Release"></a>
+  <a href="https://github.com/AfonsoPaiva/ARIADNE/releases/tag/v0.1.0-beta.1"><img src="https://img.shields.io/badge/Release-v0.1.0--beta.1-911010?style=for-the-badge" alt="Release"></a>
   <img src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 21">
   <img src="https://img.shields.io/badge/Byte%20Buddy-1.14.12-2962FF?style=for-the-badge" alt="Byte Buddy">
   <img src="https://img.shields.io/badge/License-Apache%202.0-911010?style=for-the-badge" alt="License">
@@ -71,10 +71,10 @@ While **OpenTelemetry** is built for *distributed tracing across services*, **Ar
 
 ### 1. Java Agent (Zero Code Changes)
 
-Download `ariadne-agent-0.1.0-alpha.3.jar` from [Releases](https://github.com/AfonsoPaiva/ARIADNE/releases) and attach it at startup:
+Download `ariadne-agent-0.1.0-beta.1.jar` from [Releases](https://github.com/AfonsoPaiva/ARIADNE/releases) and attach it at startup:
 
 ```bash
-java -javaagent:ariadne-agent-0.1.0-alpha.3.jar -jar your-application.jar
+java -javaagent:ariadne-agent-0.1.0-beta.1.jar -jar your-application.jar
 ```
 
 Automatically instruments:
@@ -91,13 +91,13 @@ Automatically instruments:
 <dependency>
     <groupId>io.github.afonsopaiva</groupId>
     <artifactId>ariadne-core</artifactId>
-    <version>0.1.0-alpha.3</version>
+    <version>0.1.0-beta.1</version>
 </dependency>
 ```
 
 **Gradle:**
 ```kotlin
-implementation("io.github.afonsopaiva:ariadne-core:0.1.0-alpha.3")
+implementation("io.github.afonsopaiva:ariadne-core:0.1.0-beta.1")
 ```
 
 ---

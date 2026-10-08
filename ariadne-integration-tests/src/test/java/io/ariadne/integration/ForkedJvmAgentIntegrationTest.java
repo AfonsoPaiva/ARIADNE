@@ -89,7 +89,7 @@ class ForkedJvmAgentIntegrationTest {
     }
 
     private static File resolveAgentJar() {
-        String version = "0.1.0-alpha.2";
+        String version = "0.1.0-beta.1";
         String userHome = System.getProperty("user.home", "");
         String localM2Jar = userHome + "/.m2/repository/io/ariadne/ariadne-agent/" + version + "/ariadne-agent-" + version + ".jar";
 

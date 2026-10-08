@@ -496,7 +496,7 @@
         <a href="index.html#benchmarks" class="nav-link">Benchmarks</a>
         <a href="index.html#setup" class="nav-link">How to setup</a>
         <a href="index.html#versions" class="nav-link">
-          Releases <span class="nav-badge">v0.1.0-alpha.3</span>
+          Releases <span class="nav-badge">v0.1.0-beta.1</span>
         </a>
         <a href="wiki.html" class="nav-link" style="color: var(--text-heading); font-weight: 700;">Wiki Docs</a>
 
@@ -696,7 +696,7 @@
           <p>
             The <code>ariadne-agent</code> module is packaged as a standard Java Agent using ByteBuddy:
           </p>
-          <pre><code>java -javaagent:ariadne-agent-0.1.0-alpha.3.jar -jar application.jar</code></pre>
+          <pre><code>java -javaagent:ariadne-agent-0.1.0-beta.1.jar -jar application.jar</code></pre>
           <p>
             Upon JVM startup, the agent dynamically attaches byte-code advice to:
           </p>
@@ -1116,15 +1116,15 @@ val handler = CoroutineExceptionHandler { ctx, exception -&gt;
           <h2>16. Getting Started &amp; Installation</h2>
           <h3>Option A: Zero-Code Java Agent (Recommended)</h3>
           <p>
-            Download <code>ariadne-agent-0.1.0-alpha.3.jar</code> from the <a href="https://github.com/AfonsoPaiva/ARIADNE/releases" target="_blank" rel="noopener" style="color: var(--accent-red); font-weight: 700; text-decoration: underline;">GitHub Releases</a> page and add the flag to your JVM startup script:
+            Download <code>ariadne-agent-0.1.0-beta.1.jar</code> from the <a href="https://github.com/AfonsoPaiva/ARIADNE/releases" target="_blank" rel="noopener" style="color: var(--accent-red); font-weight: 700; text-decoration: underline;">GitHub Releases</a> page and add the flag to your JVM startup script:
           </p>
-          <pre><code>java -javaagent:/path/to/ariadne-agent-0.1.0-alpha.3.jar -jar your-app.jar</code></pre>
+          <pre><code>java -javaagent:/path/to/ariadne-agent-0.1.0-beta.1.jar -jar your-app.jar</code></pre>
 
           <h3>Option B: Programmatic Maven Dependency</h3>
           <pre><code>&lt;dependency&gt;
     &lt;groupId&gt;io.github.afonsopaiva&lt;/groupId&gt;
     &lt;artifactId&gt;ariadne-core&lt;/artifactId&gt;
-    &lt;version&gt;0.1.0-alpha.3&lt;/version&gt;
+    &lt;version&gt;0.1.0-beta.1&lt;/version&gt;
 &lt;/dependency&gt;</code></pre>
         </section>
 
