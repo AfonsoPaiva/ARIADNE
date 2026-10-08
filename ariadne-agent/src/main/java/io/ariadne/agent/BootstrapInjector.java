@@ -30,8 +30,11 @@ import io.ariadne.core.CallSiteMetadata;
 import io.ariadne.core.CanaryProbeResult;
 import io.ariadne.core.ContextCarrier;
 import io.ariadne.core.Link;
+import io.ariadne.core.ScopedValueContextCarrier;
 import io.ariadne.core.SiteRegistry;
 import io.ariadne.core.ThreadLocalContextCarrier;
+import io.ariadne.core.TraceContext;
+import io.ariadne.core.TraceContexts;
 import io.ariadne.core.UnsupportedFrameworkVersionException;
 
 /**
@@ -75,7 +78,10 @@ public final class BootstrapInjector {
                     SiteRegistry.class,
                     ContextCarrier.class,
                     ThreadLocalContextCarrier.class,
+                    ScopedValueContextCarrier.class,
                     AriadneContext.class,
+                    TraceContext.class,
+                    TraceContexts.class,
                     AsyncCausalityException.class,
                     AriadneReconstructor.class,
                     AriadneRunnable.class,

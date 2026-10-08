@@ -383,7 +383,7 @@
                     <plugin>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs-maven-plugin</artifactId>
-                        <version>4.9.0.0</version>
+                        <version>4.8.6.6</version>
                         <configuration>
                             <effort>Max</effort>
                             <threshold>Medium</threshold>
@@ -394,7 +394,7 @@
                             <dependency>
                                 <groupId>com.github.spotbugs</groupId>
                                 <artifactId>spotbugs</artifactId>
-                                <version>4.9.0</version>
+                                <version>4.8.6</version>
                             </dependency>
                             <dependency>
                                 <groupId>org.ow2.asm</groupId>
