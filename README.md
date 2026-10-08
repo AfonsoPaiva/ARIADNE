@@ -44,7 +44,7 @@ java.lang.IllegalStateException: Payment gateway timeout [orderId=ORD-2026-999]
 ```
 
 ### Why it's fast (Near-Zero Overhead)
-- **Normal Path (99.9%+):** Allocates a single immutable 40-byte pointer node (`Link`) in thread-local memory. No stack traces or Throwables are captured during task submission (~5.8 ns).
+- **Normal Path (99.9%+):** Allocates a single immutable 40-byte pointer node (`Link`) in thread-local memory. No stack traces or Throwables are captured during task submission (1.55 ns allocation, 7.05 ns spawn).
 - **Failure Path Only:** Only when an unhandled exception is thrown does Ariadne traverse the pointer chain backwards and synthesize the suppressed stack trace.
 - **Bounded Memory:** Bounded to `O(maxDepth)` with an origin-preserving sliding window to prevent leaks in long-lived or repeating streams.
 
@@ -57,7 +57,7 @@ While **OpenTelemetry** is built for *distributed tracing across services*, **Ar
 | Feature | **Ariadne** | **OpenTelemetry Java SDK** |
 | :--- | :--- | :--- |
 | **Primary Focus** | In-process asynchronous exception stack traces | Distributed cross-service request tracing |
-| **Context Hop Cost** | **~5.8 ns / 40 B alloc** (immutable `Link`) | **~35–55 ns / 300+ B alloc** (Span, Scope, Timers) |
+| **Context Hop Cost** | **7.05 ns / 40.0 B alloc** (immutable `Link`) | **~35–55 ns / 300+ B alloc** (Span, Scope, Timers) |
 | **Normal Path Overhead** | Sub-microsecond; zero stack generation | Span lifecycle tracking and queue exporter buffers |
 | **Failure Representation** | Direct `AsyncCausalityException` in `Throwable.addSuppressed()` | Error status / span event in external collector |
 | **External Dependencies** | **Zero**; works in-memory with your existing logger | Requires Collector, Jaeger/Tempo/Zipkin, storage |
@@ -106,12 +106,18 @@ implementation("io.github.afonsopaiva:ariadne-core:0.1.0-beta.1")
 
 | Operation | Latency | Allocation | Mechanism |
 | :--- | :---: | :---: | :--- |
-| **Context Read (`current()`)** | ~2.7 ns | 0 B | Fast ThreadLocal / volatile carrier read |
-| **Context Hop (`spawn`)** | ~5.8 ns | 40 B | 40-byte immutable node in TLAB |
-| **Scoped Attach / Scope** | ~14.9 ns | 0 B | Reusable scope pool |
-| **Call Site Resolution (`CLASS` mode)** | ~8.7 ns | 0 B | `ClassValue` cache (production default) |
-| **CompletableFuture Pipeline** | ~1 to 2 µs | ~230 B/hop | Dominated by OS thread scheduling |
-| **Project Reactor** | +0% to +2% | ~5x less alloc | Compared to `Hooks.onOperatorDebug()` |
+| **Context Read (`current()`)** | 1.43 ns | 0.0 B | Fast ThreadLocal / volatile carrier read |
+| **Direct Link Allocation** | 1.55 ns | 40.0 B | 40-byte immutable node in TLAB |
+| **Context Hop (`spawn`)** | 7.05 ns | 40.0 B | Atomic Link allocation + depth bounds check |
+| **Scoped Attach & Scope** | 10.28 ns | 0.0 B | Reusable scope pool (`try-with-resources`) |
+| **Cached Site Registry Lookup** | 1.25 ns | 0.0 B | Lock-free site cache |
+| **Call Site Resolution (`CLASS` mode)** | 5.29 ns | 0.0 B | `ClassValue` cache (production default) |
+| **Call Site Resolution (`SAMPLED` mode)** | 21.11 ns | 10.1 B | 1:N StackWalker sampling |
+| **CompletableFuture Single-Hop** | 18.84 µs | 216.0 B | Identical to baseline (18.99 µs, within error margin) |
+| **CompletableFuture Multi-Hop** | 18.69 µs | 536.3 B | Baseline 18.41 µs (delta: +0.27 µs) |
+| **Project Reactor (Mono Hop)** | 19.13 µs | 488.0 B | Baseline 18.85 µs (+1.5%); **~5.8x less alloc** than `onOperatorDebug` (2848 B) |
+| **Project Reactor (Flux Stream Hop)** | 20.87 µs | 3864.1 B | Baseline 20.62 µs (+1.2%); **~1.8x less alloc** than `onOperatorDebug` (7064 B) |
+| **Virtual Thread Execution** | 18.07 µs | 624.1 B | Baseline 17.55 µs (+2.9%) |
 
 ---
 
