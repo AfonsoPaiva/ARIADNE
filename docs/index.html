@@ -1251,25 +1251,25 @@
           <div class="bar-row">
             <div class="bar-meta">
               <span style="color: var(--accent-red); font-weight: 700;">Ariadne Context Hop (spawn)</span>
-              <span style="color: var(--accent-red); font-weight: 700;">7.05 ns / 40.0 B alloc</span>
+              <span style="color: var(--accent-red); font-weight: 700;">8.16 ns / 40.0 B alloc</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill ariadne" style="width: 15%;"></div>
+              <div class="bar-fill ariadne" style="width: 12%;"></div>
             </div>
           </div>
 
           <div class="bar-row">
             <div class="bar-meta">
-              <span>OpenTelemetry Span + Scope</span>
-              <span>~35 to 55 ns / ~300+ B alloc</span>
+              <span>OpenTelemetry Span (start + end)</span>
+              <span>115.62 ns / 368.0 B alloc</span>
             </div>
             <div class="bar-track">
-              <div class="bar-fill legacy" style="width: 85%;"></div>
+              <div class="bar-fill legacy" style="width: 90%;"></div>
             </div>
           </div>
 
           <p style="font-size: 12px; color: var(--text-muted); margin-top: 14px;">
-            <strong>Direct Link Allocation:</strong> <strong>1.55 ns / 40.0 B</strong>; Context Read: <strong>1.43 ns / 0.0 B</strong>. Stack traces synthesized <em>only on error</em>, avoiding span telemetry pipelines.
+            <strong>Ariadne is 14.2x faster</strong> with <strong>9.2x less memory allocation</strong> per trace node. Stack traces synthesized <em>only on error</em>, avoiding span telemetry pipelines.
           </p>
         </div>
       </div>

@@ -1040,59 +1040,81 @@ val handler = CoroutineExceptionHandler { ctx, exception -&gt;
 
           <h3>Ariadne vs. OpenTelemetry: Benchmark &amp; Architecture Analysis</h3>
           <p>
-            While OpenTelemetry is designed for <em>distributed tracing across network boundaries</em>, Ariadne is purpose-built for <em>zero-overhead in-process causal reconstruction</em>. Their mechanical execution profiles reflect these different goals:
+            While OpenTelemetry is designed for <em>distributed tracing across network boundaries</em>, Ariadne is purpose-built for <em>zero-overhead in-process causal reconstruction within the JVM</em>.
           </p>
           <div class="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Dimension</th>
-                  <th>Ariadne (In-Process Causality)</th>
-                  <th>OpenTelemetry Java SDK (Distributed Tracing)</th>
+                  <th>Operation / Dimension</th>
+                  <th>Baseline</th>
+                  <th>Ariadne</th>
+                  <th>OpenTelemetry Java SDK</th>
+                  <th>Analysis</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong>Context Hop Latency</strong></td>
-                  <td><strong>7.05 ns</strong> (ThreadLocal / TLAB alloc)</td>
-                  <td><strong>~35 to 55 ns</strong> (Array-based Context copy + Span creation)</td>
+                  <td><strong>Trace Node Creation</strong> (<code>Link</code> vs. <code>Span</code>)</td>
+                  <td>—</td>
+                  <td><strong>8.16 ns</strong> / <code>40.0 B</code></td>
+                  <td><strong>115.62 ns</strong> / <code>368.0 B</code></td>
+                  <td><strong>Ariadne is 14.2x faster</strong>, <strong>9.2x less memory</strong>.</td>
                 </tr>
                 <tr>
-                  <td><strong>Memory per Hop</strong></td>
-                  <td><strong>40.0 B</strong> (Single immutable <code>Link</code> node)</td>
-                  <td><strong>~200 to 512 B</strong> (Span, Attributes map, TraceState, Scope objects)</td>
+                  <td><strong>Direct Link Allocation</strong></td>
+                  <td>—</td>
+                  <td><strong>4.41 ns</strong> / <code>40.0 B</code></td>
+                  <td><strong>115.62 ns</strong> / <code>368.0 B</code></td>
+                  <td><strong>26x faster</strong> (TLAB immutable node).</td>
                 </tr>
                 <tr>
-                  <td><strong>Call Site Resolution</strong></td>
-                  <td><strong>5.29 ns / 0.0 B</strong> (CLASS mode via <code>ClassValue</code>)</td>
-                  <td>N/A (Relies on manual instrumentation or bytecode wrappers)</td>
+                  <td><strong>Scope Activation</strong> (<code>try-with-resources</code>)</td>
+                  <td>—</td>
+                  <td><strong>11.24 ns</strong> / <strong>0.0 B</strong></td>
+                  <td><strong>4.63 ns</strong> / <strong>32.0 B</strong></td>
+                  <td><strong>Ariadne allocates 0 B</strong>; OTel allocates 32 B per scope.</td>
                 </tr>
                 <tr>
-                  <td><strong>Normal Path Overhead</strong></td>
-                  <td><strong>Sub-microsecond</strong>; zero stack-trace generation on healthy path</td>
-                  <td>Span lifecycle state machine, timer captures, and queue exporter allocations</td>
+                  <td><strong>Context Read</strong> (<code>current</code>)</td>
+                  <td>—</td>
+                  <td><strong>1.60 ns</strong> / <code>0.0 B</code></td>
+                  <td><strong>0.90 ns</strong> / <code>0.0 B</code></td>
+                  <td>Pure ThreadLocal carrier reads.</td>
                 </tr>
                 <tr>
-                  <td><strong>Failure Reconstruction</strong></td>
-                  <td><strong>Lazy backward traversal</strong>; synthesized into <code>Throwable.addSuppressed()</code></td>
-                  <td>Exception recorded as Span event / status code in APM backend</td>
+                  <td><strong>Java 21 Virtual Threads</strong></td>
+                  <td>3.25 µs / <code>399.9 B</code></td>
+                  <td><strong>3.02 µs</strong> / <code>656.0 B</code></td>
+                  <td><strong>3.14 µs</strong> / <code>560.0 B</code></td>
+                  <td>Both match Loom scheduler performance.</td>
                 </tr>
                 <tr>
-                  <td><strong>Infrastructure Requirement</strong></td>
-                  <td><strong>Zero</strong> (Local JVM, logs directly to existing logger/terminal)</td>
-                  <td>Requires Collector, Jaeger/Tempo/Zipkin backend, storage, and networking</td>
+                  <td><strong>Platform Thread Pool Submit</strong></td>
+                  <td>5.03 µs / <code>112.2 B</code></td>
+                  <td><strong>5.83 µs</strong> / <code>168.2 B</code></td>
+                  <td><strong>5.08 µs</strong> / <code>136.2 B</code></td>
+                  <td>Sub-microsecond execution overhead.</td>
                 </tr>
                 <tr>
-                  <td><strong>Symbiosis (v0.2.0)</strong></td>
-                  <td colspan="2">With <code>AriadneOtelBridge</code>, Ariadne captures the active OTel Span identity at zero runtime overhead and attaches it to JVM exception logs (<code>[Trace: 00-...-01]</code>), uniting in-process call stacks with distributed traces.</td>
+                  <td><strong>CompletableFuture Single-Hop</strong></td>
+                  <td>5.11 µs / <code>160.2 B</code></td>
+                  <td><strong>5.71 µs</strong> / <code>213.4 B</code></td>
+                  <td><strong>5.08 µs</strong> / <code>194.8 B</code></td>
+                  <td>Minimal propagation overhead (&lt;60 B).</td>
+                </tr>
+                <tr>
+                  <td><strong>Symbiosis</strong></td>
+                  <td colspan="4">With <code>AriadneOtelBridge</code>, Ariadne captures the active OTel Span identity at zero runtime overhead and attaches it to JVM exception logs (<code>[Trace: 00-...-01]</code>), uniting in-process call stacks with distributed traces.</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 12px;">
-            All raw JSON results (<code>benchmark-results.json</code>) and the table generation utility script (<code>scripts/generate_benchmark_tables.py</code>) are attached and published with every release on GitHub.
+          <p style="margin-top: 14px;">
+            Run this head-to-head benchmark on your own machine:
           </p>
+          <pre><code>java -jar ariadne-benchmarks/target/benchmarks.jar OpenTelemetryComparisonBenchmark -f 1 -wi 2 -i 3 -prof gc</code></pre>
         </section>
 
         <!-- 15. Static State Architecture & Operational Limitations -->
