@@ -749,10 +749,7 @@
 
         <!-- 10. Distributed Tracing -->
         <section class="wiki-section" id="distributed-tracing">
-          <h2>10. W3C Tracing &amp; OpenTelemetry <span style="font-size: 0.85rem; border: 1px solid var(--accent-green, #10b981); color: var(--accent-green, #10b981); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Available in v0.2.0</span></h2>
-          <p style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green, #10b981); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
-            <strong>Implemented Feature:</strong> Full support for W3C TraceContext Level 1 propagation and zero-dependency OpenTelemetry reflection synchronization.
-          </p>
+          <h2>10. W3C Tracing &amp; OpenTelemetry</h2>
           <p>
             Ariadne natively integrates with the W3C Trace Context standard via <code>TraceContext</code> and <code>TraceContexts</code>:
           </p>
@@ -776,10 +773,7 @@ AriadneOtelBridge.install();</code></pre>
 
         <!-- 11. Scoped Values -->
         <section class="wiki-section" id="scoped-values">
-          <h2>11. Java 21 Scoped Values &amp; Loom <span style="font-size: 0.85rem; border: 1px solid var(--accent-green, #10b981); color: var(--accent-green, #10b981); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Available in v0.2.0</span></h2>
-          <p style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green, #10b981); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
-            <strong>Implemented Feature:</strong> Production-ready lexical scope carrier for JDK 21+ Scoped Values (JEP 446 / JEP 464 / JEP 487).
-          </p>
+          <h2>11. Java 21 Scoped Values &amp; Loom</h2>
           <p>
             In Java 21, millions of lightweight Virtual Threads can be created concurrently. Traditional <code>ThreadLocal</code> variables can create memory retention leaks if not meticulously cleaned up.
           </p>
@@ -801,10 +795,7 @@ carrier.runWhere(link, () -&gt; {
 
         <!-- 12. Coroutines -->
         <section class="wiki-section" id="coroutines">
-          <h2>12. Kotlin Coroutines Bridge <span style="font-size: 0.85rem; border: 1px solid var(--accent-green, #10b981); color: var(--accent-green, #10b981); padding: 2px 8px; border-radius: 4px; vertical-align: middle;">Available in v0.2.0</span></h2>
-          <p style="background: rgba(16, 185, 129, 0.1); border-left: 3px solid var(--accent-green, #10b981); padding: 10px 14px; margin-bottom: 16px; border-radius: 4px;">
-            <strong>Implemented Feature:</strong> Official <code>ThreadContextElement</code> adapter for Kotlin suspend/resume flows.
-          </p>
+          <h2>12. Kotlin Coroutines Bridge</h2>
           <p>
             When using Kotlin Coroutines, tasks suspend and resume across different threads and dispatchers. Ariadne's <code>AriadneCoroutineBridge</code> (in <code>ariadne-adapter-kotlin</code>) hooks directly into coroutine scheduling:
           </p>
